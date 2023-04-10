@@ -67,12 +67,9 @@ class SpectraTable(QWidget):
         def updateNumber(num):
             spectrum = self.currentSelectedSpectrum
             if spectrum:
-                if self.correctionType == "X+":
-                    newXValues = [self.updateCorrection(value, num) for value in spectrum.xValues]
-                    newYValues = spectrum.yValues
-                else:
-                    newXValues = spectrum.xValues
-                    newYValues = [self.updateCorrection(value, num) for value in spectrum.yValues]
+                tup = self.updateCorrection(spectrum.xValues, spectrum.yValues, self.numberEdit.value)
+                newXValues = tup[0]
+                newYValues = tup[1]
 
                 if spectrum.dataType == DataTypes.Trf:
                     xValues = newXValues
@@ -118,9 +115,6 @@ class SpectraTable(QWidget):
 
         delegate = ReadOnlyDelegate(self.tableWidget)
         self.tableWidget.setItemDelegateForColumn(self.labels.index("Color"), delegate)  # readonly for column
-
-        # self.tableWidget.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        # self.tableWidget.customContextMenuRequested.connect(self.onCustomContextMenu)
 
         self.tableWidget.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.tableWidget.customContextMenuRequested.connect(self.generateMenu)
@@ -205,21 +199,26 @@ class SpectraTable(QWidget):
         if logicalIndex is not None:
             self.signalCellClick.emit(logicalIndex, 0)
 
-    def updateCorrection(self, value, num):
-        if self.correctionType == "Y+":
-            return value + num
-        elif self.correctionType == "Y*":
-            return value * num
-        elif self.correctionType == "X+":
-            return value + num
+    def updateCorrection(self, xValues, yValues, num):
+        newXValues = xValues.copy()
+        newYValues = yValues.copy()
+        for i in range(len(xValues)):
+            if self.correctionType == "Y+":
+                newYValues[i] = yValues[i] + num
+            elif self.correctionType == "Y*":
+                newYValues[i] = yValues[i] * num
+            elif self.correctionType == "Y+X*":
+                newYValues[i] = yValues[i] + xValues[i] * num
+            elif self.correctionType == "X+":
+                newXValues[i] = xValues[i] + num
+        return newXValues, newYValues
 
     def saveCorrection(self):
         spectrum = self.currentSelectedSpectrum
         if spectrum and self.correctionWidget.isVisible():
-            if self.correctionType == "X+":
-                spectrum.xValues = [self.updateCorrection(value, self.numberEdit.value) for value in spectrum.xValues]
-            else:
-                spectrum.yValues = [self.updateCorrection(value, self.numberEdit.value) for value in spectrum.yValues]
+            tup = self.updateCorrection(spectrum.xValues, spectrum.yValues, self.numberEdit.value)
+            spectrum.xValues = tup[0]
+            spectrum.yValues = tup[1]
 
             self.currentSelectedSpectrum = None
             self.correctionWidget.setVisible(False)
@@ -245,6 +244,9 @@ class SpectraTable(QWidget):
                 self.menu.addAction(shiftYAction)
                 multiplyYAction = QAction('Correction Y: multiply', self)
                 multiplyYAction.triggered.connect(self.onCorrectionYMultiply)
+                linearYAction = QAction('Correction Y: add linear X', self)
+                linearYAction.triggered.connect(self.onCorrectionYLinear)
+                self.menu.addAction(linearYAction)
                 self.menu.addAction(multiplyYAction)
                 shiftXAction = QAction('Correction X: add', self)
                 shiftXAction.triggered.connect(self.onCorrectionXShift)
@@ -285,6 +287,17 @@ class SpectraTable(QWidget):
             self.correctionType = "Y*"
             self.numberEdit.resetValue(1)
             text = self.rightClickSpectrum.dataType + " Y*"
+            self.correctionLabel.setText(text)
+            self.currentSelectedSpectrum = self.rightClickSpectrum
+
+    @pyqtSlot()
+    def onCorrectionYLinear(self):
+        if self.rightClickSpectrum in self.selectedPlotsBySpectra:
+            self.saveCorrection()
+            self.correctionWidget.setVisible(True)
+            self.correctionType = "Y+X*"
+            self.numberEdit.resetValue(0)
+            text = self.rightClickSpectrum.dataType + " Y+X*"
             self.correctionLabel.setText(text)
             self.currentSelectedSpectrum = self.rightClickSpectrum
 
