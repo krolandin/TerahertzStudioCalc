@@ -208,7 +208,10 @@ class MainWindow(QMainWindow):
                 return
             spectrumStr = ""
             for i in range(len(curves[0].x)):
-                spectrumStr += str(curves[0].x[i])
+                xValue = curves[0].x[i]
+                if curve.dataType == DataTypes.SignalH:
+                    xValue = curves[0].x[i] * 1e-4  # Oe to T
+                spectrumStr += str(xValue)
                 for curve in curves:
                     spectrumStr += "\t" + str(curve.y[i])
                 spectrumStr += "\n"
@@ -222,7 +225,11 @@ class MainWindow(QMainWindow):
             for spectrum in table.selectedPlotsBySpectra:
                 if spectrum.dataType == plotDataType:
                     for i in range(len(spectrum.xValues)):
-                        spectrumStr += str(spectrum.xValues[i]) + "\t" + str(spectrum.yValues[i]) + "\n"
+                        xValue = spectrum.xValues[i]
+                        yValue = spectrum.yValues[i]
+                        if spectrum.dataType == DataTypes.Phf:
+                            yValue = spectrum.yValues[i] / spectrum.xValues[i]
+                        spectrumStr += str(xValue) + "\t" + str(yValue) + "\n"
         clipboard.copy(spectrumStr)
         self.statusbar.showMessage("Copy experiment to clipboard: " + plotDataType)
 

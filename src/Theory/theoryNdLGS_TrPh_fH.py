@@ -77,13 +77,13 @@ class theoryNdLGS_TrPh_fH(Theory):
                 if model.name == Model.OSCILLATOR:
                     eps_i += model.deltaEps.value * model.f0.value ** 2 / (
                             model.f0.value ** 2 - self.f[i] ** 2 - complex(0, model.gamma.value * self.f[i]))
-                if model.name == Model.MAGNET_OSCILLATOR_ND:
+                if model.name == Model.MAGNET_OSCILLATOR_ND and self.Hext.value != 0:
                     E = model.B.value * self.muB * self.Hext.value
                     f0 = 2 * E / self.kcm
                     deltaMu = 4 * self.PI / self.Vcell * (model.A.value * self.muB) ** 2 * math.tanh(
                         E / self.kB / self.Temperature.value) / E
                     mu_i += deltaMu * f0 ** 2 / (f0 ** 2 - self.f[i] ** 2 - complex(0, model.gamma.value * self.f[i]))
-                if model.name == Model.OSCILLATOR_ND:
+                if model.name == Model.OSCILLATOR_ND and self.Hext.value != 0:
                     E = model.mu.value * self.muB * self.Hext.value
                     f0 = 2 * E / self.kcm
                     eps_i += model.deltaEps.value * f0 ** 2 / (f0 ** 2 - self.f[i] ** 2 - complex(0, model.gamma.value * self.f[i]))
@@ -159,16 +159,32 @@ class theoryNdLGS_TrPh_fH(Theory):
         E = 1 / 2 * self.fFix.value / 30 * self.kcm
         HRes = E / model.B.value / self.muB
         f0 = self.fFix.value/30
+        temperature = 1.8
         deltaMu = 4 * self.PI / self.Vcell * (model.A.value * self.muB) ** 2 * math.tanh(
-            E / self.kB / self.Temperature.value) / E
+            E / self.kB / temperature) / E
         return HRes/10000, f0, deltaMu
 
     def getModeDeltaMu_fRes(self, model):
         HRes = self.Hext.value
         E = model.B.value * self.muB * HRes
         f0 = 2 * E / self.kcm
+        temperature = 1.8
         deltaMu = 4 * self.PI / self.Vcell * (model.A.value * self.muB) ** 2 * math.tanh(
-            E / self.kB / self.Temperature.value) / E
+            E / self.kB / temperature) / E
+        return HRes/10000, f0, deltaMu
+
+    def getModeDeltaMu(self, model):
+        temperature = 1.8
+        if self.Hext.value == 0:
+            E = 1 / 2 * self.fFix.value / 30 * self.kcm
+            HRes = E / model.B.value / self.muB
+            f0 = self.fFix.value/30
+        else:
+            HRes = self.Hext.value
+            E = model.B.value * self.muB * HRes
+            f0 = 2 * E / self.kcm
+        deltaMu = 4 * self.PI / self.Vcell * (model.A.value * self.muB) ** 2 * math.tanh(
+                E / self.kB / temperature) / E
         return HRes/10000, f0, deltaMu
 
     def getModeDeltaEps(self, model):

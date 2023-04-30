@@ -27,14 +27,14 @@ class SpectraPlot(QWidget):
         self.currentItem = None
         self.currentItemId = None
 
-        actionCopyTheory = QAction('Copy theory', self)
         actionCopyExp = QAction('Copy experiment', self)
+        actionCopyTheory = QAction('Copy theory', self)
         self.plotWidget.plot().scene().contextMenu.remove(self.plotWidget.plot().scene().contextMenu[0])
         self.plotWidget.plotItem.vb.menu.addSeparator()
-        self.plotWidget.plotItem.vb.menu.addAction(actionCopyTheory)
         self.plotWidget.plotItem.vb.menu.addAction(actionCopyExp)
-        actionCopyTheory.triggered.connect(self.onCopyTheory)
+        self.plotWidget.plotItem.vb.menu.addAction(actionCopyTheory)
         actionCopyExp.triggered.connect(self.onCopyExp)
+        actionCopyTheory.triggered.connect(self.onCopyTheory)
 
         # self.plotWidget.plotItem.vb.setLimits(minYRange=0.000001, yMin=0.0000001)
         self.plotWidget.plotItem.vb.setRange(rect=None, xRange=None, yRange=(10, 0.000001), padding=None, update=True)

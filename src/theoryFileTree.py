@@ -53,7 +53,7 @@ class TheoryFileTree(QTreeView):
             menu.addAction(action)
             action.triggered.connect(self.onCopyModelsTable)
             menu.addSeparator()
-            action = QAction("Explore", self)
+            action = QAction("Show in Explorer", self)
             menu.addAction(action)
             action.triggered.connect(self.onExplore)
         elif os.path.isfile(filePath):
@@ -92,8 +92,7 @@ class TheoryFileTree(QTreeView):
             # theoryStr += "\t" + str(theory.Temperature.value)
             for m in theory.models:
                 if m.name == m.MAGNET_OSCILLATOR_ND:
-                    tup = theory.getModeDeltaMu_HRes(m)
-                    # tup = theory.getModeDeltaMu_fRes(m)
+                    tup = theory.getModeDeltaMu(m)
                     theoryStr += "\t" + str(tup[0])
                     theoryStr += "\t" + str(tup[1])
                     theoryStr += "\t" + str(tup[2])
@@ -103,6 +102,10 @@ class TheoryFileTree(QTreeView):
                     theoryStr += "\t" + str(tup[0])
                     theoryStr += "\t" + str(tup[1])
                     theoryStr += "\t" + str(tup[2])
+                    theoryStr += "\t" + str(m.gamma.value)
+                if m.name == m.OSCILLATOR:
+                    theoryStr += "\t" + str(m.deltaEps.value)
+                    theoryStr += "\t" + str(m.f0.value)
                     theoryStr += "\t" + str(m.gamma.value)
         else:
             for p in theory.parameters:

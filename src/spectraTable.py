@@ -1,3 +1,5 @@
+import array
+
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtGui import QColor
 from PyQt5.QtCore import QObject, pyqtSignal, Qt, pyqtSlot
@@ -86,7 +88,7 @@ class SpectraTable(QWidget):
                 try:
                     self.selectedPlotsBySpectra[spectrum].setData(xValues, yValues)
                 except KeyError:
-                    print("spectraTable.py/updateNumber(num): KeyError")
+                    print("spectraTable.py/updateNumber(num): KeyError. Key: " + spectrum.dataType)
 
         numberEdit.signalUpdateNumber.connect(updateNumber)
         # ###################### NUMBER EDITOR ####################
@@ -200,8 +202,8 @@ class SpectraTable(QWidget):
             self.signalCellClick.emit(logicalIndex, 0)
 
     def updateCorrection(self, xValues, yValues, num):
-        newXValues = xValues.copy()
-        newYValues = yValues.copy()
+        newXValues = xValues[:]
+        newYValues = yValues[:]
         for i in range(len(xValues)):
             if self.correctionType == "Y+":
                 newYValues[i] = yValues[i] + num
