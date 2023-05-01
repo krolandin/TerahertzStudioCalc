@@ -1,9 +1,10 @@
-from theoryModels import TheoryTrPh_fH, TheoryTrPh_f
+from theoryModels import TheoryTrPh_fH
 from temp.theoryLangasite_GaussDirection import TheoryLangasite_GaussDirection
 from theoryLangasite_M_H import TheoryLangasite_M_H
 from theoryLangasite_M_teta import TheoryLangasite_M_teta
 from theoryHoLGS_DistrAngleDcf import TheoryHoLGS_DistrAngleDcf
 from theoryNdLGS_TrPh_fH import theoryNdLGS_TrPh_fH
+from theoryTrPh_f import TheoryTrPh_f
 
 
 class TheoryType:
