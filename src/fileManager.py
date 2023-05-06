@@ -35,6 +35,8 @@ def readSpectraFile(f):
         return readMT(f)
     elif fileExt == ".MANG":
         return readMANG(f)
+    elif fileExt == ".IRR":
+        return readBrukerReflection(f)
     else:
         return None
     # self.statusbar.showMessage("Loaded: " + Path(f).name)
@@ -52,6 +54,8 @@ def getFileType(f):
         return FileTypes.MT
     elif fileExt == ".MANG":
         return FileTypes.MTeta
+    elif fileExt == ".IRR":
+        return FileTypes.RPhRf
     else:
         return None
 
@@ -191,6 +195,51 @@ def readMANG(f):
     return readTwoColText(f, FileTypes.MTeta, DataTypes.M_teta)
 
 
+def readBrukerReflection(f):
+    return readMultipleColText(f, FileTypes.RPhRf, [DataTypes.R_f, DataTypes.PhR_f])
+
+
+def readMultipleColText(f, fileType, dataTypes):
+    spectra = []
+    try:
+        file = open(f, "rb")
+    except FileNotFoundError:
+        return []
+    sampleName = Path(f).parts[-2]
+    spectrumName = Path(f).stem
+    file_time = dt.datetime.fromtimestamp(os.path.getmtime(f))
+    date = file_time.strftime("%d.%m.%Y")
+    lines = file.readlines()
+    numPoints = len(lines)
+    for i in range(len(dataTypes)):
+        spectrum = SpectrumObject(sampleName, spectrumName, 0, 0, date,
+                                  Path(f).stem,
+                                  dataType=dataTypes[i], numPoints=numPoints, pStart=0, pEnd=0,
+                                  fileType=fileType)
+        spectrum.filePath = os.path.relpath(f, start=os.curdir)
+        spectrum.inFileNum = 1
+        spectrum.xValues = []
+        spectrum.yValues = []
+        minX = 10000000
+        maxX = -10000000
+        for line in lines:
+            lineStr = str(line.decode("utf-8")).replace(",", ".")
+            values = [float(strVal) for strVal in lineStr.split()]
+            if len(values) < 2:
+                continue
+            if values[0] < minX:
+                minX = values[0]
+            if values[0] > maxX:
+                maxX = values[0]
+            spectrum.xValues.append(values[0])
+            spectrum.yValues.append(values[1 + i])
+        spectrum.pStart = minX
+        spectrum.pEnd = maxX
+        spectrum.temperature = 0
+        spectra.append(spectrum)
+    return spectra
+
+
 def readTwoColText(f, fileType, dataType):
     spectra = []
     try:
@@ -222,7 +271,7 @@ def readTwoColText(f, fileType, dataType):
             minX = values[0]
         if values[0] > maxX:
             maxX = values[0]
-        spectrum.xValues.append(values[0])
+        spectrum.xValues.append(values[0]/30)
         spectrum.yValues.append(values[1])
     spectrum.pStart = minX
     spectrum.pEnd = maxX

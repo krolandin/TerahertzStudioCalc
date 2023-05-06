@@ -9,7 +9,9 @@ class DataTypes:
     f_H = "f(H)"
     dMu_H = "dMu(H)"
     Test = "Test"
-    types = [Trf, Phf, SignalH, MirrorH, M_H, M_T, M_teta, f_H, dMu_H]
+    R_f = "R(f)"
+    PhR_f = "PhR(f)"
+    types = [Trf, Phf, SignalH, MirrorH, M_H, M_T, M_teta, f_H, dMu_H, R_f, PhR_f]
 
 
 def getDataTypeAttributes(types, dataType):
@@ -49,4 +51,5 @@ class FileTypes:
     MH = "M_H"
     MT = "M_T"
     MTeta = "M_Teta"
-    types = [TrPhf, TrPhH, MH, MT, MTeta]
+    RPhRf = "RPhR_f"
+    types = [TrPhf, TrPhH, MH, MT, MTeta, RPhRf]
