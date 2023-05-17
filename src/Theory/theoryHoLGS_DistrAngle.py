@@ -64,6 +64,7 @@ class TheoryHoLGS_DistrAngle(Theory):
             if model.name == Model.OSCILLATOR:
                 f0 = model.f0.value
                 eps_H0 += model.deltaEps.value * f0 ** 2 / (f0 ** 2 - f ** 2 - complex(0, model.gamma.value * f))
+
         mu = calcDmu_H_f(H, f, int8(self.axis_Hext.value), int8(self.axis_h.value))
 
         self.tr_H = []

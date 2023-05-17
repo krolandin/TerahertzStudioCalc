@@ -31,6 +31,10 @@ def getDataTypeAttributes(types, dataType):
             attributes = DataTypeAttributes(nameY="Magnetization, emu/g", nameX="Temperature, K")
         elif dataType == DataTypes.M_teta:
             attributes = DataTypeAttributes(nameY="Magnetization, emu/g", nameX="Angle, degrees")
+        elif dataType == DataTypes.R_f:
+            attributes = DataTypeAttributes(nameY="Reflectivity", nameX="Frequency, cm<sup>-1</sup>")
+        elif dataType == DataTypes.PhR_f:
+            attributes = DataTypeAttributes(nameY="Phase, rad", nameX="Frequency, cm<sup>-1</sup>")
         else:
             attributes = DataTypeAttributes(nameY="TestY, units", nameX="TestX, units")
     else:

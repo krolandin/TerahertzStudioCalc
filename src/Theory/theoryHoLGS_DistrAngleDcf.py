@@ -106,30 +106,29 @@ ro = 5.2
 # Magnetization, frequencies and magnetic contributions for a distorted crystal: six sites
 
 ############## PARAMS
-cc = 0.0455  # Ho concentration 0.0156 0.0445
-numPoints = 30
+cc = 0.0445  # Ho concentration 0.0156 0.0445
+numPoints = 60
 oneSidePointsNum = 30
 T = 1.8
 # ma = 3.75 * muB  # 3.75
 # mb = 7.13 * muB  # 7.13
 # mc = 5.05 * muB  # 5.05
 mIon = 9.4 * muB
-tetaIon = PI * 58 / 180  # math.acos(mc / mIon)  # PI * 58.16 / 180
-fiIon = PI * 0 / 180  # math.atan(mb / ma)  # PI * 63.43 / 180
-sigmaTeta = PI * 9 / 180  # 8
-sigmaFi = PI * 12 / 180  # 14
-Dcf0 = 0.4  # 1.005
-sigmaDcf2 = 1.0
-gamma = 1.0
+tetaIon = PI * 58 / 180  # math.acos(mc / mIon)  # PI * 58 / 180
+fiIon = PI * 60 / 180  # math.atan(mb / ma)  # PI * 60 / 180
+sigmaTeta = PI * 12 / 180  # 128
+sigmaFi = PI * 12 / 180  # 12
+Dcf0 = 1  # 1.005
+sigmaDcf2 = 1
+gamma = 1
 ############## PARAMS
 MvHoLang = (138.90 * (1 - cc) + 164.93 * cc) * 3 + 69.72 * 5 + 28.08 + 16 * 14
 # mIon = math.sqrt(ma ** 2 + mb ** 2 + mc ** 2)  # 9 .51 * self.muB
 pi23 = 2 * PI / 3
 dTeta = 3 * 2 * sigmaTeta / (2 * oneSidePointsNum + 1)
 dFi = 3 * 2 * sigmaFi / (2 * oneSidePointsNum + 1)
-dDcf2 = 7 / (2 * oneSidePointsNum + 1)  # normalX
+dDcf2 = 12 / (2 * oneSidePointsNum)  # normalX
 nPos4PI = 4 * PI * ro / 6 * (3 * cc * NA / MvHoLang) * dTeta * dFi * dDcf2
-# nPos = 1 / 6 * (3 * cc * NA / MvHoLang) * dTeta * dFi * dDcf2
 
 
 @jit(float32(float32, float32), nopython=True, nogil=True)
@@ -185,7 +184,9 @@ def getVectM(pos, deltaTeta, deltaFi):
 
 @jit(float32(float32, float32, float32), nopython=True, nogil=True)
 def getDMuPosE(EPos, m, _Dcf):
-    dMuPos = nPos4PI * m ** 2 / (EPos * kcm) * math.tanh(EPos * kcm / kB / T) * (_Dcf / EPos) ** 2
+    th = math.tanh(EPos * kcm / kB / T)
+    dMuPos = nPos4PI * m**2 * (th * (_Dcf/EPos)**2 / (EPos * kcm) + (1 - th**2) * (EPos**2 - _Dcf**2)/(EPos**2 * kB * T))
+    # dMuPos = nPos4PI * m ** 2 / (EPos * kcm) * math.tanh(EPos * kcm / kB / T) * (_Dcf / EPos) ** 2
     return dMuPos
 
 
@@ -199,7 +200,8 @@ def calcDmu_H_f(H_i, f_i, axis_Hext, axis_h):
     for iFi in prange(-oneSidePointsNum, oneSidePointsNum):
         for iTeta in prange(-oneSidePointsNum, oneSidePointsNum):
             for iDcf in prange(0, 2 * oneSidePointsNum):
-                for pos in prange(0, 5):
+            #iDcf = 1
+                for pos in prange(6):
                     vectMx, vectMy, vectMz = getVectM(pos, float32(iTeta * dTeta), float32(iFi * dFi))
 
                     if axis_Hext == 1:  # H||a
@@ -212,7 +214,6 @@ def calcDmu_H_f(H_i, f_i, axis_Hext, axis_h):
                         Hx, Hy, Hz = H_i, 0, 0
 
                     EPos = getEPos(Hx, Hy, Hz, vectMx, vectMy, vectMz, float32(iDcf * dDcf2 * 0.5))
-                    # EPos = getEPos(Hx, Hy, Hz, vectMx, vectMy, vectMz, Dcf0)
                     if EPos == 0:
                         EPos = 0.00001
                     f0 = 2 * EPos
@@ -226,7 +227,6 @@ def calcDmu_H_f(H_i, f_i, axis_Hext, axis_h):
                     else:  # h||a
                         vectM = vectMx
 
-                    # dMu = getDMuPosE(EPos, vectM, Dcf0) * \
                     dMu = getDMuPosE(EPos, vectM, iDcf * dDcf2 * 0.5) * \
                                     normal(iTeta * dTeta, sigmaTeta) * \
                                     normal(iFi * dFi, sigmaFi) * \
