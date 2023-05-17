@@ -271,7 +271,7 @@ def readTwoColText(f, fileType, dataType):
             minX = values[0]
         if values[0] > maxX:
             maxX = values[0]
-        spectrum.xValues.append(values[0]/30)
+        spectrum.xValues.append(values[0])
         spectrum.yValues.append(values[1])
     spectrum.pStart = minX
     spectrum.pEnd = maxX
