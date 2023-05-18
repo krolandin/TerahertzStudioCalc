@@ -1,4 +1,3 @@
-from theoryModels import TheoryTrPh_fH
 # from temp.theoryLangasite_GaussDirection import TheoryLangasite_GaussDirection
 from theoryLangasite_M_H import TheoryLangasite_M_H
 from theoryLangasite_M_teta import TheoryLangasite_M_teta
@@ -8,6 +7,7 @@ from theoryTrPh_f import TheoryTrPh_f
 from theoryTrPh_f_RPh_f import TheoryTrPh_f_RPh_f
 from theoryTbLGS_M_teta import TheoryTbLGS_M_teta
 from theoryGaussPhonon import TheoryGaussPhonon
+from theoryTrPh_fH import TheoryTrPh_fH
 
 
 class TheoryType:
