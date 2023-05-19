@@ -38,7 +38,10 @@ class Theory(QObject):
 
     @pyqtSlot(float)
     def updateNumber(self, num):
-        self.update()
+        if self.name == "Ho LGS DistrAngleDcf" or self.name == "Ho LGS M(teta)" or self.name == "Ho LGS M(H)":
+            pass
+        else:
+            self.update()
         self.plotCurves()
 
     def updateCurvePoints(self, x, y, dataType, comment=""):

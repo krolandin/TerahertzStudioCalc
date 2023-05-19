@@ -124,8 +124,8 @@ ro = 5.2
 # Magnetization, frequencies and magnetic contributions for a distorted crystal: six sites
 
 ############## PARAMS
-numPoints = 25
-oneSidePointsNum = 10
+numPoints = 30
+oneSidePointsNum = 15
 ############## PARAMS
 pi23 = 2 * PI / 3
 
@@ -174,9 +174,9 @@ def getVectM(pos, deltaTeta, deltaFi, mIon, tetaIon, fiIon):
 
 @jit(float32(float32, float32, float32, float32, float32), nopython=True, nogil=True)
 def getDMuPosE(EPos, m, _Dcf, T, nPos4PI):
-    th = math.tanh(EPos * kcm / kB / T)
-    dMuPos = nPos4PI * m**2 * (th * (_Dcf/EPos)**2 / (EPos * kcm) + (1 - th**2) * (EPos**2 - _Dcf**2)/(EPos**2 * kB * T))
-    # dMuPos = nPos4PI * m ** 2 / (EPos * kcm) * math.tanh(EPos * kcm / kB / T) * (_Dcf / EPos) ** 2
+    # th = math.tanh(EPos * kcm / kB / T)
+    # dMuPos = nPos4PI * m**2 * (th * (_Dcf/EPos)**2 / (EPos * kcm) + (1 - th**2) * (EPos**2 - _Dcf**2)/(EPos**2 * kB * T))
+    dMuPos = nPos4PI * m ** 2 / (EPos * kcm) * math.tanh(EPos * kcm / kB / T) * (_Dcf / EPos) ** 2
     return dMuPos
 
 
