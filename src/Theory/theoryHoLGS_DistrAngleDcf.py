@@ -125,7 +125,7 @@ ro = 5.2
 
 ############## PARAMS
 numPoints = 30
-oneSidePointsNum = 15
+oneSidePointsNum = 20
 ############## PARAMS
 pi23 = 2 * PI / 3
 
@@ -133,6 +133,16 @@ pi23 = 2 * PI / 3
 @jit(float32(float32, float32), nopython=True, nogil=True)
 def normal(x, sigma):
     return math.exp(- 0.5 * (x / sigma) ** 2) / math.sqrt(2 * PI) / sigma
+
+
+@jit(float32(float32, float32), nopython=True, nogil=True)
+def rayleigh(x, sigma):
+    return x * math.exp(-0.5 * (x / sigma) ** 2) / sigma ** 2
+
+@jit(float32(float32, float32), nopython=True, nogil=True)
+def malkin(x, sigma):
+    return sigma*x/((sigma**2+x**2)**(3/2))
+
 
 
 @jit(float32(float32, float32, float32, float32), nopython=True, nogil=True)
@@ -197,14 +207,14 @@ def calcDmu_H_f(H, f_i,
                 axis_Hext, axis_h,
                 mu):
 
-    maxPos = 2 * deltaCFMaxPos
-    normMu = maxPos - deltaCF2Sigma ** 2 / maxPos
-    normFactor = calcNormFactor(deltaCF2Sigma, normMu)
+    # maxPos = 2 * deltaCFMaxPos
+    # normMu = maxPos - deltaCF2Sigma ** 2 / maxPos
+    # normFactor = calcNormFactor(deltaCF2Sigma, normMu)
 
     MvHoLang = (138.90 * (1 - cc) + 164.93 * cc) * 3 + 69.72 * 5 + 28.08 + 16 * 14
     dTeta = 3 * 2 * sigmaTeta / (2 * oneSidePointsNum + 1)
     dFi = 3 * 2 * sigmaFi / (2 * oneSidePointsNum + 1)
-    dDcf2 = 12 / (2 * oneSidePointsNum)  # normalX
+    dDcf2 = 7 / (2 * oneSidePointsNum)  # 12 normalX, 7 rayleigh, 25 malkin
     nPos4PI = 4 * PI * ro / 6 * (3 * cc * NA / MvHoLang) * dTeta * dFi * dDcf2
 
     mu[:] = [0 for i in range(len(H))]
@@ -243,7 +253,9 @@ def calcDmu_H_f(H, f_i,
                         dMu = getDMuPosE(EPos, vectM, iDcf * dDcf2 * 0.5, Temperature, nPos4PI) * \
                                         normal(iTeta * dTeta, sigmaTeta) * \
                                         normal(iFi * dFi, sigmaFi) * \
-                                        normalX(iDcf * dDcf2, deltaCF2Sigma, normMu, normFactor)
+                                        rayleigh(iDcf * dDcf2, deltaCF2Sigma)
+                                        # malkin(iDcf * dDcf2, deltaCF2Sigma)
+                                        # normalX(iDcf * dDcf2, deltaCF2Sigma, normMu, normFactor)
 
                         r = f0 ** 2 - f_i ** 2 - 1j * gamma * f_i
                         if r != 0:
