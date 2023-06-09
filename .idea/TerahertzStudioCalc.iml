@@ -5,6 +5,14 @@
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/Theory" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />
+      <excludeFolder url="file://$MODULE_DIR$/src/temp" />
+      <excludeFolder url="file://$MODULE_DIR$/theories/Ho0.05/Ha hc ea bCut 1.8K" />
+      <excludeFolder url="file://$MODULE_DIR$/theories/Ho0.05/Hb hc eb aCut 1.8K" />
+      <excludeFolder url="file://$MODULE_DIR$/theories/Ho0.05/trash" />
+      <excludeFolder url="file://$MODULE_DIR$/theories/Nd LGS/TrPh(H)/Новая папка" />
+      <excludeFolder url="file://$MODULE_DIR$/theories/Nd LGS/Bruker" />
+      <excludeFolder url="file://$MODULE_DIR$/theories/Nd LGS/TrPh(f) T=1.8-300K" />
+      <excludeFolder url="file://$MODULE_DIR$/theories/Tb LGS" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.9 (PyCharmProject)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
