@@ -107,6 +107,15 @@ class TheoryFileTree(QTreeView):
                     theoryStr += "\t" + str(m.deltaEps.value)
                     theoryStr += "\t" + str(m.f0.value)
                     theoryStr += "\t" + str(m.gamma.value)
+        elif theory.name == "Tr,Ph(f), Tr,Ph(H(f))":
+            for m in theory.models:
+                if m.name == m.MAGNET_OSCILLATOR_H:
+                    theoryStr += "\t" + str(theory.getModelHRes(m))
+                    theoryStr += "\t" + str(theory.fFix.value)
+                    theoryStr += "\t" + str(m.deltaMu.value)
+                    theoryStr += "\t" + str(m.gamma.value)
+                    theoryStr += "\t" + str(m.deltaCF.value)
+                    theoryStr += "\t" + str(m.magneticMoment.value)
         else:
             for p in theory.parameters:
                 if p.isMain:
