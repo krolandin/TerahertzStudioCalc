@@ -299,6 +299,7 @@ class Model:
     MAGNET_OSCILLATOR_H = "Magnet oscillator (H)"
     MAGNET_OSCILLATOR_ND = "Magnet oscillator f,mu(H)"
     OSCILLATOR_ND = "Oscillator dEps f(H) NdLGS"
+    # OSCILLATOR_PR = "Oscillator dMu Rayleigh distr"
 
     def __init__(self, name):
         self.name = name
@@ -333,6 +334,11 @@ class Model:
             self.gamma = TheoryParameter(0.2, '\u03B3', "cm<sup>-1</sup>")  # gamma
             self.mu = TheoryParameter(0.825, '\u03BC<sub>trans</sub>', "\u03BC<sub>B</sub>")
             self.parameters = [self.deltaEps, self.gamma, self.mu]
+        # if self.name == self.OSCILLATOR_PR:
+        #     self.deltaMu = TheoryParameter(0.02, 'Δμ', "")  # delta mu
+        #     self.gamma = TheoryParameter(0.5, 'γ', "cm<sup>-1</sup>")  # gamma
+        #     self.sigma = TheoryParameter(8, 'σ<sub>Rayleigh</sub>', "cm<sup>-1</sup>")
+        #     self.parameters = [self.deltaMu, self.gamma, self.sigma]
 
     def f0_H(self, H):
         kcm = self.h * self.LIGHT_SPEED

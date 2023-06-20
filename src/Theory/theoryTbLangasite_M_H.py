@@ -9,8 +9,8 @@ from numba import vectorize, guvectorize, cuda, jit, float32, float64, int8, uin
 from numba.types import UniTuple
 
 
-class TheoryLangasite_M_H(Theory):
-    name = "Ho LGS M(H)"
+class TheoryTbLangasite_M_H(Theory):
+    name = "Tb LGS M(H) 3 + 3 pos"
 
     def __init__(self):
         Theory.__init__(self)

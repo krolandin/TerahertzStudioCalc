@@ -1,6 +1,6 @@
 import math
 from PyQt5.QtWidgets import QLineEdit, QHBoxLayout
-from PyQt5.QtCore import pyqtSignal, pyqtSlot
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from spectrumObject import SpectrumObject
 from dataTypes import DataTypes, FileTypes
 
@@ -86,3 +86,27 @@ class NumberLineEdit(QLineEdit):
         #     fn.setPointSize(fn.pointSize() +  delta)
         #     self.setFont(fn)
         #     event.accept()
+
+    def keyPressEvent(self, event):
+        event.ignore()
+        if event.key() == Qt.Key_Up:
+            direction = 1
+        elif event.key() == Qt.Key_Down:
+            direction = -1
+        else:
+            super(NumberLineEdit, self).keyPressEvent(event)
+            return
+
+        text = self.text()
+        dotPos = self.text().find(".")
+        curPos = self.cursorPosition()
+        if curPos == dotPos:
+            self.value += direction
+        elif curPos < dotPos:
+            self.value += direction * 10 ** -(curPos - dotPos)
+        elif curPos > dotPos:
+            self.value += direction * 10 ** -(curPos - dotPos - 1)
+        if math.isnan(self.value) or math.isinf(self.value):
+            self.value = 0
+        self.setText(f"{self.value:.8f}")
+        self.setCursorPosition(curPos - dotPos + self.text().find("."))
