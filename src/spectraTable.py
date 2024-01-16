@@ -1,5 +1,3 @@
-import array
-
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtGui import QColor
 from PyQt5.QtCore import QObject, pyqtSignal, Qt, pyqtSlot
@@ -10,7 +8,9 @@ from numberLineEdit import NumberLineEdit
 from fileManager import FileManager, getFileType, saveExperimentFiles
 import clipboard
 from dataTypes import DataTypes
-
+from pathlib import Path
+import os
+import subprocess
 
 class SpectraTable(QWidget):
     signalCellClick = pyqtSignal(int, int, str)
@@ -221,10 +221,22 @@ class SpectraTable(QWidget):
             tup = self.updateCorrection(spectrum.xValues, spectrum.yValues, self.numberEdit.value)
             spectrum.xValues = tup[0]
             spectrum.yValues = tup[1]
-
             self.currentSelectedSpectrum = None
+            # self.rightClickSpectrum = None
             self.correctionWidget.setVisible(False)
+    def saveCorrectionForAutoShift(self):
+        spectrum = self.currentSelectedSpectrum
+        if spectrum:
+            tup = self.updateCorrection(spectrum.xValues, spectrum.yValues, self.numberEdit.value)
+            spectrum.xValues = tup[0]
+            spectrum.yValues = tup[1]
+            self.currentSelectedSpectrum = None
+            # self.rightClickSpectrum = None
+            self.correctionWidget.setVisible(False)
+            print("saveCorrectionForAutoShift")
 
+
+    ######################  Context (right click) menu ######################
     def eventFilter(self, source, event):
         if (event.type() == QtCore.QEvent.MouseButtonPress and
                 event.buttons() == QtCore.Qt.RightButton and
@@ -240,6 +252,9 @@ class SpectraTable(QWidget):
                 copyAction = QAction('Copy', self)
                 copyAction.triggered.connect(self.onCopyToClipboard)
                 self.menu.addAction(copyAction)
+                action = QAction("Open file", self)
+                self.menu.addAction(action)
+                action.triggered.connect(self.onExplore)
                 self.menu.addSeparator()
                 shiftYAction = QAction('Correction Y: add', self)
                 shiftYAction.triggered.connect(self.onCorrectionYShift)
@@ -271,12 +286,24 @@ class SpectraTable(QWidget):
             clipboard.copy(spectrumStr)
 
     @pyqtSlot()
+    def onExplore(self):
+        if self.rightClickSpectrum:
+            # filePath = os.path.abspath(os.path.dirname(self.rightClickSpectrum.filePath))
+            filePath = os.path.abspath(self.rightClickSpectrum.filePath)
+            if os.path.isfile(filePath):
+                path = os.path.realpath(filePath)
+                # print(path)
+                # subprocess.Popen(r'explorer /select,"' + path + '"')
+                os.startfile(path)
+
+    @pyqtSlot()
     def onCorrectionYShift(self):
         if self.rightClickSpectrum in self.selectedPlotsBySpectra:
             self.saveCorrection()
             self.correctionWidget.setVisible(True)
             self.correctionType = "Y+"
             self.numberEdit.resetValue(0)
+            # if self.rightClickSpectrum:
             text = self.rightClickSpectrum.dataType + " Y+"
             self.correctionLabel.setText(text)
             self.currentSelectedSpectrum = self.rightClickSpectrum
@@ -288,6 +315,7 @@ class SpectraTable(QWidget):
             self.correctionWidget.setVisible(True)
             self.correctionType = "Y*"
             self.numberEdit.resetValue(1)
+            # if self.rightClickSpectrum:
             text = self.rightClickSpectrum.dataType + " Y*"
             self.correctionLabel.setText(text)
             self.currentSelectedSpectrum = self.rightClickSpectrum
@@ -299,6 +327,7 @@ class SpectraTable(QWidget):
             self.correctionWidget.setVisible(True)
             self.correctionType = "Y+X*"
             self.numberEdit.resetValue(0)
+            # if self.rightClickSpectrum:
             text = self.rightClickSpectrum.dataType + " Y+X*"
             self.correctionLabel.setText(text)
             self.currentSelectedSpectrum = self.rightClickSpectrum
@@ -310,43 +339,13 @@ class SpectraTable(QWidget):
             self.correctionWidget.setVisible(True)
             self.correctionType = "X+"
             self.numberEdit.resetValue(0)
+            # if self.rightClickSpectrum:
             text = self.rightClickSpectrum.dataType + " X+"
             self.correctionLabel.setText(text)
             self.currentSelectedSpectrum = self.rightClickSpectrum
+    ######################  Context (right click) menu ######################
 
 
 class ReadOnlyDelegate(QStyledItemDelegate):
     def createEditor(self, parent, option, index):
         return  # do nothing
-
-# class ActionSize(QWidgetAction):
-#     def __init__(self, parent: QWidget, target: QPlainTextEdit):
-#         super(ActionSize, self).__init__(parent)
-#         # self.setIcon(QIcon("font-size.svg"))
-#         # self.setText("Size")
-#         # self.has_changed = False
-#         # w = QSpinBox()
-#         # w = QDoubleSpinBox()
-#         # self.setDefaultWidget(w)
-#         # self.cursor = target.textCursor()
-#         # self.char_format = self.cursor.charFormat()
-#         # font = self.char_format.font()
-#         # size = font.pointSize()
-#         # w.setRange(6, 100)
-#         # w.setValue(size)
-#         w = QLineEdit()
-#         w.setValidator(QDoubleValidator(0, 1e20, 5))
-#         self.setDefaultWidget(w)
-#         w.textChanged.connect(self.onValueChanged)
-#         w.editingFinished.connect(self.onEditingFinished)
-#
-#     def onValueChanged(self, value):
-#         print(value)
-#
-#     def onEditingFinished(self):
-#         validationRule = QDoubleValidator(0, 1e20, 5)
-#         print(validationRule.validate(self.text(), 14))
-#         if validationRule.validate(self.text(), 14)[0] == QValidator.Acceptable:
-#             self.setFocus()
-#         else:
-#             self.setText('')

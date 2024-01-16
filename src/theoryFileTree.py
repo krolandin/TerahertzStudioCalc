@@ -85,8 +85,8 @@ class TheoryFileTree(QTreeView):
 
     def getTheoryModelsString(self, theory):
         theoryStr = ""
-        theoryStr += theory.text
         if theory.name == "NgLGS TrPh(f,H)":
+            theoryStr += theory.text
             # theoryStr += "\t" + str(theory.fFix.value)
             # theoryStr += "\t" + str(theory.Hext.value)
             # theoryStr += "\t" + str(theory.Temperature.value)
@@ -107,15 +107,11 @@ class TheoryFileTree(QTreeView):
                     theoryStr += "\t" + str(m.deltaEps.value)
                     theoryStr += "\t" + str(m.f0.value)
                     theoryStr += "\t" + str(m.gamma.value)
-        elif theory.name == "Tr,Ph(f), Tr,Ph(H(f))":
-            for m in theory.models:
-                if m.name == m.MAGNET_OSCILLATOR_H:
-                    theoryStr += "\t" + str(theory.getModelHRes(m))
-                    theoryStr += "\t" + str(theory.fFix.value)
-                    theoryStr += "\t" + str(m.deltaMu.value)
-                    theoryStr += "\t" + str(m.gamma.value)
-                    theoryStr += "\t" + str(m.deltaCF.value)
-                    theoryStr += "\t" + str(m.magneticMoment.value)
+        if theory.name == "Ho LGS DistrAngleDcf":
+            theoryStr += str(theory.fFix.value)
+            # theoryStr += "\t" + str(theory.axis_Hext.value)
+            theoryStr += theory.getResonanceFields(theory.axis_Hext.value)
+            print(theoryStr)
         else:
             for p in theory.parameters:
                 if p.isMain:

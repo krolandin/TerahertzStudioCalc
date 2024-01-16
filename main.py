@@ -15,6 +15,7 @@ from PyQt5.QtCore import pyqtSlot, Qt, QSize
 import clipboard
 from dataTypes import DataTypes, FileTypes
 from screenSettings import screenSize
+import numpy as np
 
 
 class MainWindow(QMainWindow):
@@ -130,7 +131,7 @@ class MainWindow(QMainWindow):
 
         # ##################### INIT #########################
         self.setAcceptDrops(True)
-        self.loadExpFiles(self.loadDataOnStart())
+        # self.loadExpFiles(self.loadDataOnStart())
         self.currentTableSpectrum = None
         mainSplitter.setSizes([600, 300])
         # ##################### INIT #########################
@@ -229,6 +230,8 @@ class MainWindow(QMainWindow):
                         yValue = spectrum.yValues[i]
                         if spectrum.dataType == DataTypes.Phf:
                             yValue = spectrum.yValues[i] / spectrum.xValues[i]
+                        if spectrum.dataType == DataTypes.MirrorH:
+                            yValue = -yValue
                         spectrumStr += str(xValue) + "\t" + str(yValue) + "\n"
         clipboard.copy(spectrumStr)
         self.statusbar.showMessage("Copy experiment to clipboard: " + plotDataType)
@@ -336,14 +339,17 @@ class MainWindow(QMainWindow):
     ################# DRAG AND DROP FILES #################
 
     def saveDataOnExit(self):
-        with open('expFiles.pkl', 'wb') as file:
-            pickle.dump(FileManager.files, file)
+        pass
+        # with open('expFiles.pkl', 'wb') as file:
+        #     pickle.dump(FileManager.files, file)
 
     def loadDataOnStart(self):
-        if Path('expFiles.pkl').is_file():
-            with open('expFiles.pkl', 'rb') as file:
-                return pickle.load(file)
+        pass
+        # if Path('expFiles.pkl').is_file():
+        #     with open('expFiles.pkl', 'rb') as file:
+        #         return pickle.load(file)
 
+    ##################### Key pressed #####################
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:
             self.closeAllExpTabsAndTheories()
@@ -354,13 +360,46 @@ class MainWindow(QMainWindow):
             if self.currentPlotWithCursor:
                 self.currentPlotWithCursor.setCursorToNext()
         if event.key() == Qt.Key_Space:
-            pass
-            # self.copyTableSpectrumToClipboard()
+            print("Space")
+        if event.key() == Qt.Key_Q:
+            if self.theoryUI.currentTheory is not None:
+                self.theoryUI.currentTheory.update()
+                self.theoryUI.currentTheory.plotCurves()
+                if self.theoryUI.currentTheory.name == "Ho LGS DistrAngleDcf" or \
+                    self.theoryUI.currentTheory.name == "Ho LGS DistrAngleMu" or \
+                    self.theoryUI.currentTheory.name == "Ho LGS DistrAngleMuDcf":
+                    for spectrum in self.tables[0].spectra:
+                        v = spectrum.xValues
+                        maximum = np.max(v)
+                        minimum = np.min(v)
+                        index_of_maximum = np.where(v == maximum)
+                        index_of_minimum = np.where(v == minimum)
+
+                        # print(index_of_maximum[0][0])
+                        # print(index_of_minimum[0][0])
+
+                        if spectrum.dataType == DataTypes.SignalH:
+                            self.tables[0].rightClickSpectrum = self.tables[0].currentSelectedSpectrum = spectrum
+                            self.tables[0].onCorrectionYMultiply()
+                            value = self.theoryUI.currentTheory.curves[0].y[0] / spectrum.yValues[index_of_minimum[0][0]]
+                            self.tables[0].numberEdit.resetValue(value)
+                            self.tables[0].saveCorrectionForAutoShift()
+                        if spectrum.dataType == DataTypes.MirrorH:
+                            self.tables[0].rightClickSpectrum = self.tables[0].currentSelectedSpectrum = spectrum
+                            self.tables[0].onCorrectionYShift()
+                            value = - self.theoryUI.currentTheory.curves[1].y[0] - spectrum.yValues[index_of_minimum[0][0]]
+                            self.tables[0].numberEdit.setText(f"{value:.8f}")
+                        if spectrum.dataType == DataTypes.dMu_H:
+                            self.tables[0].rightClickSpectrum = self.tables[0].currentSelectedSpectrum = spectrum
+                            self.tables[0].onCorrectionYShift()
+                            value = self.theoryUI.currentTheory.curves[1].y[0]
+                            self.tables[0].numberEdit.setText(f"{value:.8f}")
+
         if event.key() == Qt.Key_Return:
             if self.theoryUI.currentTheory is not None:
                 self.theoryUI.currentTheory.update()
                 self.theoryUI.currentTheory.plotCurves()
-
+    ##################### Key pressed #####################
 
 class TabBar(QTabBar):
     def tabSizeHint(self, index):
@@ -376,8 +415,8 @@ app = QApplication(sys.argv)
 mainWindow = MainWindow()
 widget = QtWidgets.QStackedWidget()
 widget.addWidget(mainWindow)
-widget.setMinimumWidth(int(screenSize()[0] * 0.7))
-widget.setMinimumHeight(int(screenSize()[1] * 0.7))
+widget.setMinimumWidth(int(screenSize()[0] * 0.4))
+widget.setMinimumHeight(int(screenSize()[1] * 0.4))
 widget.showMaximized()
 widget.show()
 try:

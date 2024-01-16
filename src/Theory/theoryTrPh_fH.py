@@ -9,17 +9,6 @@ class TheoryTrPh_fH(Theory):
     PI = math.pi
     name = "Tr,Ph(f), Tr,Ph(H(f))"
 
-    LIGHT_SPEED = 2.998e10  # cm/s
-    PI = math.pi
-    h = 0.66260755e-26
-    muB = 0.927401549e-20
-    kcm = h * LIGHT_SPEED
-    ro = 5.1269
-    kB = 1.380658E-16
-    NA = 6.022E23
-    MvNdLang = 144.242 * 3 + 69.72 * 5 + 28.086 + 15.9994 * 14  # g/mol
-    Vcell = 3.347009702e-22  # cm3
-
     def __init__(self):
         Theory.__init__(self)
         self.listItem = QListWidgetItem(self.name)
@@ -138,9 +127,3 @@ class TheoryTrPh_fH(Theory):
         fiT = A - math.atan(b * (a ** 2 + b ** 2 - 1) / ((a ** 2 + b ** 2) * (2 + a) + a)) + math.atan(
             (R * E * math.sin(2 * A + 2 * fiR)) / (1 - R * E * math.cos(2 * A + 2 * fiR)))
         return T, fiT
-
-    def getModelHRes(self, model):
-        f0 = self.fFix.value / 30
-        mu = model.magneticMoment.value * self.muB
-        HRes = self.kcm / mu * math.sqrt((f0 * 0.5) ** 2 - model.deltaCF.value ** 2)
-        return HRes / 10000

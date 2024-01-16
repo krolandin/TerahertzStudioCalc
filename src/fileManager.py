@@ -308,8 +308,8 @@ def saveExperimentFiles(spectra, fileType):
                         file.write(" " + f"{spectraSignal.xValues[i]:.5f}" +
                                    "    " + f"{spectraSignal.temperature:.2f}" +
                                    "     " + f"{spectraSignal.temperature:.2f}" +
-                                   "   " + f"{spectraSignal.yValues[i]:.5f}" +
-                                   ("  " + f"{spectraMirror.yValues[i]:.4f}" if spectraMirror is not None else "") +
+                                   "   " + f"{spectraSignal.yValues[i]:.8f}" +
+                                   ("  " + f"{spectraMirror.yValues[i]:.5f}" if spectraMirror is not None else "") +
                                    "\n")
                     file.close()
         if spectraSignal.dataType == DataTypes.Trf:
@@ -373,6 +373,7 @@ def saveTheory(theory, directory, tables):
             models.append({"name": model.name, "text": model.listItem.text(), "parameters": modelParameters})
         experiments = []
         for table in tables:
+            table.onSaveAll()
             for spectra in table.selectedPlotsBySpectra:
                 experiments.append({"filePath": spectra.filePath, "inFileNum": spectra.inFileNum})
         theoryObject = {"name": theory.name, "parameters": parameters, "models": models, "experiments": experiments}
@@ -383,19 +384,25 @@ def loadTheory(filePath):
     if Path(filePath).is_file():
         with open(filePath, 'rb') as file:
             theoryDict = pickle.load(file)
-            theory = TheoryType.types[theoryDict["name"]]()
-            theory.directory = os.path.relpath(os.path.dirname(filePath), start=os.curdir)
-            theory.text = Path(filePath).stem
-            for i in range(len(theoryDict["parameters"])):
-                theory.parameters[i].value = theoryDict["parameters"][i]
-                theory.parameters[i].numberEdit.resetValue(theory.parameters[i].value)
-            for modelDict in theoryDict["models"]:
-                model = Model(modelDict["name"])
-                model.text = modelDict["text"]
-                for i in range(len(modelDict["parameters"])):
-                    model.parameters[i].value = modelDict["parameters"][i]
-                    model.parameters[i].numberEdit.resetValue(model.parameters[i].value)
-                theory.models.append(model)
+
+            if theoryDict["name"] in TheoryType.types:
+                theory = TheoryType.types[theoryDict["name"]]()
+                theory.directory = os.path.relpath(os.path.dirname(filePath), start=os.curdir)
+                theory.text = Path(filePath).stem
+                for i in range(len(theoryDict["parameters"])):
+                    if i >= len(theory.parameters): break
+                    theory.parameters[i].value = theoryDict["parameters"][i]
+                    theory.parameters[i].numberEdit.resetValue(theory.parameters[i].value)
+                for modelDict in theoryDict["models"]:
+                    model = Model(modelDict["name"])
+                    model.text = modelDict["text"]
+                    for i in range(len(modelDict["parameters"])):
+                        model.parameters[i].value = modelDict["parameters"][i]
+                        model.parameters[i].numberEdit.resetValue(model.parameters[i].value)
+                    theory.models.append(model)
+            else:
+                theory = TheoryType.types["Ho LGS DistrAngleDcf"]()
+
             experiments = []
             for experiment in theoryDict["experiments"]:
                 experiments.append({"filePath": experiment["filePath"], "inFileNum": experiment["inFileNum"]})

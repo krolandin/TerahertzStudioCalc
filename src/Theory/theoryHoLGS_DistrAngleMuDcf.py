@@ -9,8 +9,8 @@ from numba import vectorize, cuda, jit, float32, float64, int8, uint8, int16, pr
 from numba.types import UniTuple
 
 
-class TheoryHoLGS_DistrAngleDcf(Theory):
-    name = "Ho LGS DistrAngleDcf"
+class TheoryHoLGS_DistrAngleMuDcf(Theory):
+    name = "Ho LGS DistrAngleMuDcf"
 
     def __init__(self):
         Theory.__init__(self)
@@ -27,14 +27,16 @@ class TheoryHoLGS_DistrAngleDcf(Theory):
         self.Temperature = TheoryParameter(1.8, "Temperature", "K")
         self.cc = TheoryParameter(0.0445, "Concentration", "")
 
-        self.mIon = TheoryParameter(9, 'μ<sub>ion</sub>', "μ<sub>B</sub>")
-        self.alphaIon = TheoryParameter(58, 'α<sub>ion</sub>', "deg")
-        self.sigmaAlpha = TheoryParameter(12, 'sigma α', "deg")
-        self.betaIon = TheoryParameter(60, 'β<sub>ion</sub>', "deg")
-        self.sigmaBeta = TheoryParameter(12, 'sigma β', "deg")
+        self.mIon = TheoryParameter(8, 'μ<sub>ion</sub>', "μ<sub>B</sub>")
+        self.sigmaMIon = TheoryParameter(1.5, 'sigma μ', "μ<sub>B</sub>")
+        self.alphaIon = TheoryParameter(32, 'α<sub>ion</sub>', "deg")
+        self.sigmaAlpha = TheoryParameter(8, 'sigma α', "deg")
+        self.betaIon = TheoryParameter(8, 'β<sub>ion</sub>', "deg")
+        self.sigmaBeta = TheoryParameter(8, 'sigma β', "deg")
 
-        # self.deltaCFMaxPos = TheoryParameter(1, 'none', "", False)
-        self.deltaCF2MaxPos = TheoryParameter(1, '2\u0394<sub>CF</sub> max pos', "")
+        # self.deltaCF = TheoryParameter(1, 'Δ<sub>CF</sub>', "cm<sup>-1</sup>")
+        self.deltaCF2MaxPos = TheoryParameter(1, '2\u0394<sub>CF</sub> max pos', "cm<sup>-1</sup>")
+        # self.deltaCF2Sigma = TheoryParameter(1, 'sigma 2\u0394<sub>CF</sub> max pos', "cm<sup>-1</sup>")
         self.gamma = TheoryParameter(1.0, 'γ', "cm<sup>-1</sup>")
 
         self.axis_Hext = TheoryParameter(1.0, 'H<sup>ext</sup><sub>i</sub>', "i = 1(x), 2(y), 3(z)")
@@ -47,10 +49,11 @@ class TheoryHoLGS_DistrAngleDcf(Theory):
                            self.axis_Hext, self.axis_h,
                            self.H_Start, self.H_End,
                            self.Temperature, self.cc,
-                           self.mIon,
+                           self.mIon, self.sigmaMIon,
                            self.alphaIon, self.sigmaAlpha,
                            self.betaIon, self.sigmaBeta,
-                           self.deltaCF2MaxPos,
+                           self.deltaCF2MaxPos, #self.deltaCF2Sigma,
+                           #self.deltaCF,
                            self.gamma,
                            ]
         ################### ^ PARAMETERS ^ ###################
@@ -87,12 +90,14 @@ class TheoryHoLGS_DistrAngleDcf(Theory):
                 eps_H0 += model.deltaEps.value * f0 ** 2 / (f0 ** 2 - f ** 2 - complex(0, model.gamma.value * f))
         mu = calcDmu_H_f(H, f,
                          self.Temperature.value, self.cc.value,
-                         self.mIon.value * muB,
+                         self.mIon.value * muB, self.sigmaMIon.value * muB,
                          self.alphaIon.value * PI / 180, self.sigmaAlpha.value * PI / 180,
                          self.betaIon.value * PI / 180, self.sigmaBeta.value * PI / 180,
-                         self.deltaCF2MaxPos.value,
+                         self.deltaCF2MaxPos.value, #self.deltaCF2Sigma.value,
+                         # self.deltaCF.value,
                          self.gamma.value,
-                         int8(self.axis_Hext.value), int8(self.axis_h.value))
+                         int8(self.axis_Hext.value), int8(self.axis_h.value)
+                         )
 
         self.tr_H = []
         self.ph_H = []
@@ -177,8 +182,8 @@ ro = 5.2
 # Magnetization, frequencies and magnetic contributions for a distorted crystal: six sites
 
 ############## PARAMS
-numPoints = 100
-oneSidePointsNum = 20
+numPoints = 60
+oneSidePointsNum = 25
 ############## PARAMS
 pi23 = 2 * PI / 3
 
@@ -212,8 +217,8 @@ def calcNormFactor(sigma, mu):
 
 
 @jit(float32(float32, float32, float32, float32, float32, float32, float32), nopython=True, nogil=True)
-def getEPos(vectHx, vectHy, vectHz, vectMx, vectMy, vectMz, _Dcf):  # cm^-1
-    return np.sqrt(_Dcf ** 2 + (1 / kcm * (vectHx * vectMx + vectHy * vectMy + vectHz * vectMz)) ** 2)
+def getEPos(vectHx, vectHy, vectHz, vectMx, vectMy, vectMz, deltaCF):  # cm^-1
+    return np.sqrt(deltaCF ** 2 + (1 / kcm * (vectHx * vectMx + vectHy * vectMy + vectHz * vectMz)) ** 2)
 
 
 # @jit(UniTuple(float32, 3)(uint8, float32, float32, float32, float32, float32), nopython=True, nogil=True)
@@ -235,10 +240,8 @@ def getEPos(vectHx, vectHy, vectHz, vectMx, vectMy, vectMz, _Dcf):  # cm^-1
 #     return mIon * math.cos(fi) * math.sin(teta), mIon * math.sin(fi) * math.sin(teta), mIon * math.cos(teta)
 
 
-@jit(UniTuple(float32, 3)(uint8, float32, float32, float32, float32, float32), nopython=True, nogil=True)
-def getVectMAlpha(pos, deltaAlpha, deltaBeta, mIon, alphaIon, betaIon):
-    alpha = alphaIon + deltaAlpha
-    beta = betaIon + deltaBeta
+@jit(UniTuple(float32, 3)(uint8, float32, float32, float32), nopython=True, nogil=True)
+def getVectMAlpha(pos, mIon, alpha, beta):
     if pos == 0:  # 1p
         return mIon * math.cos(alpha), \
                -mIon * math.sin(alpha) * math.sin(beta), \
@@ -270,50 +273,58 @@ def getVectMAlpha(pos, deltaAlpha, deltaBeta, mIon, alphaIon, betaIon):
 
 
 @jit(float32(float32, float32, float32, float32, float32), nopython=True, nogil=True)
-def getDMuPosE(EPos, m, _Dcf, T, nPos4PI):
+def getDMuPosE(EPos, m, deltaCF, T, nPos4PI):
     # th = math.tanh(EPos * kcm / kB / T)
-    # dMuPos = nPos4PI * m**2 * (th * (_Dcf/EPos)**2 / (EPos * kcm) + (1 - th**2) * (EPos**2 - _Dcf**2)/(EPos**2 * kB * T))
-    dMuPos = nPos4PI * m ** 2 / (EPos * kcm) * math.tanh(EPos * kcm / kB / T) * (_Dcf / EPos) ** 2
+    # dMuPos = nPos4PI * m**2 * (th * (deltaCF/EPos)**2 / (EPos * kcm) + (1 - th**2) * (EPos**2 - deltaCF**2)/(EPos**2 * kB * T))
+    dMuPos = nPos4PI * m ** 2 / (EPos * kcm) * math.tanh(EPos * kcm / kB / T) * (deltaCF / EPos) ** 2
     return dMuPos
 
 
 @vectorize([complex64(float32, float32,  # H, f
                       float32, float32,  # Temperature, cc
-                      float32,   # mIon
+                      float32, float32,  # mIon, sigmaMIon
                       float32, float32,  # alphaIon, sigmaAlpha
                       float32, float32,  # betaIon, sigmaBeta
-                      float32,  # deltaCF2MaxPos
+                      # float32, float32,  # deltaCF2MaxPos, deltaCF2Sigma
+                      float32,  # deltaCF
                       float32,  # gamma
                       int8, int8,  # axis_Hext, axis_h
                       )], target='parallel')
 def calcDmu_H_f(H_i, f_i,
                 Temperature, cc,
-                mIon,
+                mIon, sigmaMIon,
                 alphaIon, sigmaAlpha,
                 betaIon, sigmaBeta,
-                deltaCF2MaxPos,
+                deltaCF2MaxPos, #deltaCF2Sigma,
+                #deltaCF,
                 gamma,
                 axis_Hext, axis_h,
                 ):
-    # maxPos = deltaCF2MaxPos
-    # normMu = maxPos - deltaCF2Sigma ** 2 / maxPos
-    # normFactor = calcNormFactor(deltaCF2Sigma, normMu)
+    MvHoLang = (138.90 * (1 - cc) + 164.93 * cc) * 3 + 69.72 * 5 + 28.08 + 16 * 14
+    dMIon = 3 * 2 * sigmaMIon / (2 * oneSidePointsNum + 1)
+    #dAlpha = 3 * 2 * sigmaAlpha / (2 * oneSidePointsNum + 1)
+    dBeta = 3 * 2 * sigmaBeta / (2 * oneSidePointsNum + 1)
 
     deltaCF2Sigma = deltaCF2MaxPos
 
-    MvHoLang = (138.90 * (1 - cc) + 164.93 * cc) * 3 + 69.72 * 5 + 28.08 + 16 * 14
-    dAlpha = 3 * 2 * sigmaAlpha / (2 * oneSidePointsNum + 1)
-    dBeta = 3 * 2 * sigmaBeta / (2 * oneSidePointsNum + 1)
-    dDcf2 = (2 * deltaCF2MaxPos) / (4 * oneSidePointsNum)  # (maxPos + deltaCF2Sigma * 2) normalX (Rice), 4 rayleigh, 25 malkin
-    nPos4PI = 4 * PI * ro / 6 * (3 * cc * NA / MvHoLang) * dAlpha * dBeta * dDcf2
+    # normMu = deltaCF2MaxPos - deltaCF2Sigma ** 2 / deltaCF2MaxPos
+    # normFactor = calcNormFactor(deltaCF2Sigma, normMu)
+    dDcf2 = (deltaCF2MaxPos + deltaCF2Sigma * 3) / (2 * oneSidePointsNum)  # normalX (Rice)
+    # dDcf2 = (4 * deltaCF) / (2 * oneSidePointsNum)  # rayleigh
+
+    nPos4PI = 4 * PI * ro / 6 * (3 * cc * NA / MvHoLang) * dMIon * dBeta * dDcf2  # * dAlpha
 
     mu_i = 1
-    for iAlpha in prange(-oneSidePointsNum, oneSidePointsNum):
-        for iBeta in prange(-oneSidePointsNum, oneSidePointsNum):
-            for iDcf in prange(4 * oneSidePointsNum):
+    # for iAlpha in prange(-oneSidePointsNum, oneSidePointsNum):
+    for iBeta in prange(-oneSidePointsNum, oneSidePointsNum):
+        for iMIon in prange(-oneSidePointsNum, oneSidePointsNum):
+            for iDcf in prange(2 * oneSidePointsNum):
                 for pos in prange(6):
-                    vectMx, vectMy, vectMz = getVectMAlpha(pos, float32(iAlpha * dAlpha), float32(iBeta * dBeta), mIon, alphaIon, betaIon)
-
+                    vectMx, vectMy, vectMz = getVectMAlpha(pos,
+                                                           mIon + float32(iMIon * dMIon),
+                                                           alphaIon,  # + float32(iAlpha * dAlpha
+                                                           betaIon + float32(iBeta * dBeta)
+                                                           )
                     if axis_Hext == 1:  # H||a
                         Hx, Hy, Hz = H_i, 0, 0
                     elif axis_Hext == 2:  # H||b
@@ -324,6 +335,7 @@ def calcDmu_H_f(H_i, f_i,
                         Hx, Hy, Hz = H_i, 0, 0
 
                     EPos = getEPos(Hx, Hy, Hz, vectMx, vectMy, vectMz, float32(iDcf * dDcf2 * 0.5))
+                    # EPos = getEPos(Hx, Hy, Hz, vectMx, vectMy, vectMz, deltaCF)
                     if EPos == 0:
                         EPos = 0.00001
                     f0 = 2 * EPos
@@ -337,12 +349,15 @@ def calcDmu_H_f(H_i, f_i,
                     else:  # h||a
                         vectM = vectMx
 
+
+                    # dMu = getDMuPosE(EPos, vectM, deltaCF, Temperature, nPos4PI) * \
                     dMu = getDMuPosE(EPos, vectM, iDcf * dDcf2 * 0.5, Temperature, nPos4PI) * \
-                          normal(iAlpha * dAlpha, sigmaAlpha) * \
+                          normal(iMIon * dMIon, sigmaMIon) * \
                           normal(iBeta * dBeta, sigmaBeta) * \
-                          rayleigh(iDcf * dDcf2, deltaCF2Sigma)
-                    # normalX(iDcf * dDcf2, deltaCF2Sigma, normMu, normFactor)
-                    # malkin(iDcf * dDcf2, deltaCF2Sigma)
+                          rayleigh(iDcf * dDcf2, deltaCF2MaxPos)
+                # normal(iAlpha * dAlpha, sigmaAlpha) * \
+                 # normalX(iDcf * dDcf2, deltaCF2Sigma, normMu, normFactor)
+
 
                     r = f0 ** 2 - f_i ** 2 - 1j * gamma * f_i
                     if r != 0:

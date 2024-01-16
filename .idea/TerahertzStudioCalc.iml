@@ -14,7 +14,7 @@
       <excludeFolder url="file://$MODULE_DIR$/theories/Nd LGS/TrPh(f) T=1.8-300K" />
       <excludeFolder url="file://$MODULE_DIR$/theories/Tb LGS" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.9 (PyCharmProject)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.10 (TerahertzStudioCalc)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

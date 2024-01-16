@@ -202,12 +202,12 @@ def calcM_H(H,
              "(n),(),(),(),(),(),(),(),(),(),(),()->(n),(n),(n)",
              target='parallel')
 # def calcM_H(H, Mx, My, Mz):
-def calcM_Angle(H,
+def calcM_Angle(alpha,
                 cc, T, mIon, tetaIon, fiIon, sigmaTeta, sigmaFi, Dcf0, sigmaDcf2, hiVVc, hiVVab,
                 Mxy, Myz, Mxz):
-    Mxy[:] = [0 for i in range(len(H))]
-    Myz[:] = [0 for i in range(len(H))]
-    Mxz[:] = [0 for i in range(len(H))]
+    Mxy[:] = [0 for i in range(len(alpha))]
+    Myz[:] = [0 for i in range(len(alpha))]
+    Mxz[:] = [0 for i in range(len(alpha))]
 
     dTeta = 3 * 2 * sigmaTeta / (2 * oneSidePointsNum + 1)
     dFi = 3 * 2 * sigmaFi / (2 * oneSidePointsNum + 1)
@@ -218,7 +218,7 @@ def calcM_Angle(H,
     mu = maxPos - sigmaDcf2 ** 2 / maxPos
     normFactor = calcNormFactor(sigmaDcf2, mu)
 
-    for i in prange(len(H)):
+    for i in prange(len(alpha)):
         for iFi in prange(-oneSidePointsNum, oneSidePointsNum):
             for iTeta in prange(-oneSidePointsNum, oneSidePointsNum):
                 for iDcf in prange(0, 2 * oneSidePointsNum):
@@ -229,18 +229,18 @@ def calcM_Angle(H,
                                                                                                           sigmaDcf2, mu,
                                                                                                           normFactor)
 
-                        EPos = getEPos(H[i], 0, 0, vectMx, vectMy, vectMz, float32(iDcf * dDcf2 * 0.5))
-                        # EPos = getEPos(H[i], 0, 0, vectMx, vectMy, vectMz, Dcf0)
-                        if EPos == 0: EPos = 0.0000001
-                        Mxy[i] += nPos * (vectMx ** 2 * H[i]) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
-
-                        EPos = getEPos(0, H[i], 0, vectMx, vectMy, vectMz, float32(iDcf * dDcf2 * 0.5))
-                        if EPos == 0: EPos = 0.0000001
-                        Myz[i] += nPos * (vectMy ** 2 * H[i]) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
-
-                        EPos = getEPos(0, 0, H[i], vectMx, vectMy, vectMz, float32(iDcf * dDcf2 * 0.5))
-                        if EPos == 0: EPos = 0.0000001
-                        Mxz[i] += nPos * (vectMz ** 2 * H[i]) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
-        Mxy[i] += hiVVab * H[i]
-        Myz[i] += hiVVab * H[i]
-        Mxz[i] += hiVVc * H[i]
+                        # EPos = getEPos(H[i], 0, 0, vectMx, vectMy, vectMz, float32(iDcf * dDcf2 * 0.5))
+                        # # EPos = getEPos(H[i], 0, 0, vectMx, vectMy, vectMz, Dcf0)
+                        # if EPos == 0: EPos = 0.0000001
+                        # Mxy[i] += nPos * (vectMx ** 2 * H[i]) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
+                        #
+                        # EPos = getEPos(0, H[i], 0, vectMx, vectMy, vectMz, float32(iDcf * dDcf2 * 0.5))
+                        # if EPos == 0: EPos = 0.0000001
+                        # Myz[i] += nPos * (vectMy ** 2 * H[i]) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
+                        #
+                        # EPos = getEPos(0, 0, H[i], vectMx, vectMy, vectMz, float32(iDcf * dDcf2 * 0.5))
+                        # if EPos == 0: EPos = 0.0000001
+                        # Mxz[i] += nPos * (vectMz ** 2 * H[i]) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
+        Mxy[i] += hiVVab * alpha[i]
+        Myz[i] += hiVVab * alpha[i]
+        Mxz[i] += hiVVc * alpha[i]

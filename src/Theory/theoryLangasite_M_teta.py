@@ -179,44 +179,42 @@ def calcM_Angle(alpha,
     dTeta = 3 * 2 * sigmaTeta / (2 * oneSidePointsNum + 1)
     dFi = 3 * 2 * sigmaFi / (2 * oneSidePointsNum + 1)
     MvHoLang = (138.90 * (1 - cc) + 164.93 * cc) * 3 + 69.72 * 5 + 28.08 + 16 * 14
-    nPos = 1 / 6 * (3 * cc * NA / MvHoLang) * dTeta * dFi #* dDcf2
+    nPos = 1 / 6 * (3 * cc * NA / MvHoLang) * dTeta * dFi * dDcf2
 
-    # maxPos = 2 * Dcf0
-    # mu = maxPos - sigmaDcf2 ** 2 / maxPos
-    # normFactor = calcNormFactor(sigmaDcf2, mu)
+    maxPos = 2 * Dcf0
+    mu = maxPos - sigmaDcf2 ** 2 / maxPos
+    normFactor = calcNormFactor(sigmaDcf2, mu)
 
     for i in prange(len(alpha)):
         for iFi in prange(-oneSidePointsNum, oneSidePointsNum):
             for iTeta in prange(-oneSidePointsNum, oneSidePointsNum):
-                #for iDcf in prange(0, 2 * oneSidePointsNum):
-                for pos in prange(6):
-                    # if pos != 0 and pos != 1: continue
-                    vectMx, vectMy, vectMz = getVectM(pos, float32(iTeta * dTeta), float32(iFi * dFi),
-                                                      tetaIon, fiIon, mIon)
-                    dFactor = normal(iTeta * dTeta, sigmaTeta) * normal(iFi * dFi, sigmaFi) #* normalX(iDcf * dDcf2, sigmaDcf2, mu, normFactor)
-                    angle = PI * i / 180
+                for iDcf in prange(0, 2 * oneSidePointsNum):
+                    for pos in prange(6):
+                        # if pos != 0 and pos != 1: continue
+                        vectMx, vectMy, vectMz = getVectM(pos, float32(iTeta * dTeta), float32(iFi * dFi),
+                                                          tetaIon, fiIon, mIon)
+                        dFactor = normal(iTeta * dTeta, sigmaTeta) * normal(iFi * dFi, sigmaFi) * normalX(iDcf * dDcf2,
+                                                                                                          sigmaDcf2, mu,
+                                                                                                          normFactor)
+                        angle = PI * i / 180
 
-                    teta = angle + shiftXY * PI / 180
-                    EPos = getEPos(Hrot * math.sin(teta), Hrot * math.cos(teta), 0, vectMx, vectMy, vectMz,
-                                   #float32(iDcf * dDcf2 * 0.5))
-                                   float32(Dcf0))
-                    vectMH = vectMx * Hrot * math.sin(teta) + vectMy * Hrot * math.cos(teta)
-                    Mxy[i] += nPos * (vectMH ** 2 / Hrot) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
+                        teta = angle + shiftXY * PI / 180
+                        EPos = getEPos(Hrot * math.sin(teta), Hrot * math.cos(teta), 0, vectMx, vectMy, vectMz,
+                                       float32(iDcf * dDcf2 * 0.5))
+                        vectMH = vectMx * Hrot * math.sin(teta) + vectMy * Hrot * math.cos(teta)
+                        Mxy[i] += nPos * (vectMH ** 2 / Hrot) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
 
-                    teta = angle + shiftYZ * PI / 180
-                    #EPos = getEPos(0, Hrot * math.sin(teta), Hrot * math.cos(teta), vectMx, vectMy, vectMz,
-                    EPos = getEPos(0.1*Hrot * math.cos(teta), Hrot * math.sin(teta), 0.9*Hrot * math.cos(teta), vectMx, vectMy, vectMz,
-                                   # float32(iDcf * dDcf2 * 0.5))
-                                   float32(Dcf0))
-                    vectMH = vectMy * Hrot * math.sin(teta) + vectMz * Hrot * math.cos(teta)
-                    Myz[i] += nPos * (vectMH ** 2 / Hrot) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
+                        teta = angle + shiftYZ * PI / 180
+                        EPos = getEPos(0, Hrot * math.sin(teta), Hrot * math.cos(teta), vectMx, vectMy, vectMz,
+                                       float32(iDcf * dDcf2 * 0.5))
+                        vectMH = vectMy * Hrot * math.sin(teta) + vectMz * Hrot * math.cos(teta)
+                        Myz[i] += nPos * (vectMH ** 2 / Hrot) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
 
-                    teta = angle + shiftXZ * PI / 180
-                    EPos = getEPos(Hrot * math.sin(teta), 0, Hrot * math.cos(teta), vectMx, vectMy, vectMz,
-                                   # float32(iDcf * dDcf2 * 0.5))
-                                   float32(Dcf0))
-                    vectMH = vectMx * Hrot * math.sin(teta) + vectMz * Hrot * math.cos(teta)
-                    Mxz[i] += nPos * (vectMH ** 2 / Hrot) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
+                        teta = angle + shiftXZ * PI / 180
+                        EPos = getEPos(Hrot * math.sin(teta), 0, Hrot * math.cos(teta), vectMx, vectMy, vectMz,
+                                       float32(iDcf * dDcf2 * 0.5))
+                        vectMH = vectMx * Hrot * math.sin(teta) + vectMz * Hrot * math.cos(teta)
+                        Mxz[i] += nPos * (vectMH ** 2 / Hrot) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
 
         Mxy[i] += hiVVab * Hrot * math.cos(teta) ** 2 + hiVVab * Hrot * math.sin(teta) ** 2
         Myz[i] += hiVVc * Hrot * math.cos(teta) ** 2 + hiVVab * Hrot * math.sin(teta) ** 2
