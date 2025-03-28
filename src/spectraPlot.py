@@ -6,6 +6,8 @@ from pyqtgraph import ScatterPlotItem
 from dataTypes import DataTypes, getDataTypeAttributes
 from screenSettings import screenSize
 
+import numpy as np
+
 
 class SpectraPlot(QWidget):
     signalPlotClick = pyqtSignal(str)
@@ -24,17 +26,24 @@ class SpectraPlot(QWidget):
         layout_box.setContentsMargins(0, 0, 0, 0)
         layout_box.addWidget(self.plotWidget)
 
-        self.currentItem = None
-        self.currentItemId = None
-
-        actionCopyExp = QAction('Copy experiment', self)
-        actionCopyTheory = QAction('Copy theory', self)
         self.plotWidget.plot().scene().contextMenu.remove(self.plotWidget.plot().scene().contextMenu[0])
         self.plotWidget.plotItem.vb.menu.addSeparator()
+
+        actionCopyExp = QAction('Copy experiment', self)
         self.plotWidget.plotItem.vb.menu.addAction(actionCopyExp)
-        self.plotWidget.plotItem.vb.menu.addAction(actionCopyTheory)
         actionCopyExp.triggered.connect(self.onCopyExp)
+        actionCopyTheory = QAction('Copy theory', self)
+        self.plotWidget.plotItem.vb.menu.addAction(actionCopyTheory)
         actionCopyTheory.triggered.connect(self.onCopyTheory)
+
+        self.plotWidget.plotItem.vb.menu.addSeparator()
+
+        actionRangeStart = QAction('Range start', self)
+        self.plotWidget.plotItem.vb.menu.addAction(actionRangeStart)
+        actionRangeStart.triggered.connect(self.onRangeStart)
+        actionRangeEnd = QAction('Range end', self)
+        self.plotWidget.plotItem.vb.menu.addAction(actionRangeEnd)
+        actionRangeEnd.triggered.connect(self.onRangeEnd)
 
         # self.plotWidget.plotItem.vb.setLimits(minYRange=0.000001, yMin=0.0000001)
         self.plotWidget.plotItem.vb.setRange(rect=None, xRange=None, yRange=(10, 0.000001), padding=None, update=True)
@@ -44,7 +53,7 @@ class SpectraPlot(QWidget):
         attributes = getDataTypeAttributes(DataTypes.types, dataType)
         nameY = attributes.nameY
         nameX = attributes.nameX
-        logY = attributes.logY
+        self.logY = attributes.logY
 
         self.plotWidget.setBackground('w')  # Add Background colour to white
         self.plotWidget.setTitle(plotTitle, color="b", size="24px")  # in pt or px
@@ -55,7 +64,7 @@ class SpectraPlot(QWidget):
         self.plotWidget.showGrid(x=True, y=True)  # Add grid
         self.plotWidget.setXRange(0, 10, padding=0)  # Set Range
         self.plotWidget.setYRange(20, 55, padding=0)
-        self.plotWidget.setLogMode(False, logY)
+        self.plotWidget.setLogMode(False, self.logY)
         self.plotWidget.enableAutoRange()
 
         self.plotWidget.scene().sigMouseClicked.connect(self.onMouseClick)
@@ -66,23 +75,43 @@ class SpectraPlot(QWidget):
         # ####################### PLOT BUTTON ####################
 
         # ####################### CURSOR ####################
-        pen = pg.mkPen(None)
-        self.cursorItem = self.plotWidget.plot([0], [0],
-                                               name=None, pen=pen,
+        self.currentCursoredItem = None
+        self.currentCursoredItemId = None
+        self.cursorItem = self.plotWidget.plot([], [],
+                                               name=None, pen=None,
                                                symbol='x', symbolSize=12,
-                                               symbolPen=pen, symbolBrush=QColor(0x000000))
+                                               symbolPen=pg.mkPen(None), symbolBrush=QColor(0x000000))
         self.plotWidget.removeItem(self.cursorItem)
-        # self.cursorLabel = QLabel("")
 
         self.cursorLabel = QLabel(self)
-        # pos = 0.15 * self.cursorLabel.parent().rect().bottomRight() #- 0.1 * self.cursorLabel.rect().bottomRight()
-        pos = self.geometry().topLeft() - self.cursorLabel.geometry().topLeft() + QPoint(80, 40)
+        pos = self.geometry().topLeft() - self.cursorLabel.geometry().topLeft() + QPoint(120, 30)
         self.cursorLabel.move(pos)
         self.cursorLabel.setText('')
-        self.cursorLabel.setStyleSheet("QLabel{font-size: 14pt; color:rgba(0, 0, 255, 127)}")
-        self.cursorLabel.setMinimumWidth(int(screenSize()[0] * 0.12))
+        self.cursorLabel.setStyleSheet("QLabel{font-size: 16pt; color:rgba(0, 0, 255, 127);}")
+        self.cursorLabel.setFixedHeight(self.cursorLabel.sizeHint().height() + 5)
+        self.cursorLabel.setMinimumWidth(int(screenSize()[0] * 0.22))
         # rightMenuContainerLayout.addWidget(self.cursorLabel)
+
+        # Получаем ViewBox графика
+        vb = self.plotWidget.getViewBox()
+        # Функция, которая будет вызываться при изменении видимой области
+        def view_changed():
+            self.plotWidget.removeItem(self.cursorItem)
+        # Подключаем сигнал изменения области просмотра
+        vb.sigRangeChanged.connect(view_changed)
         # ####################### CURSOR ####################
+
+        # ####################### SELECTION ####################
+        self.selectionRange = [None, None]
+        self.currentSelectionItem = None
+        self.selectionItem = self.plotWidget.plot([], [],
+                                                  name=None, symbol='o',
+                                                  symbolSize=15,
+                                                  symbolPen='k',
+                                                  symbolBrush=None,
+                                                  pen=None)
+        # self.plotWidget.removeItem(self.selectionItem)
+        # ####################### SELECTION ####################
 
     def plot(self, spectrum):
         plotName = spectrum.spectrumName + ", " + spectrum.sampleName + ", " + str(spectrum.temperature) + " K"
@@ -104,15 +133,20 @@ class SpectraPlot(QWidget):
 
         plotDataItem = self.plotWidget.plot(xValues, yValues,
                                             name=plotName, pen=None,
-                                            symbol='o', symbolSize=6,
+                                            symbol='o', ymbolSize=6,
                                             symbolPen=None, symbolBrush=QColor(spectrum.color))
         self.plotWidget.removeItem(self.cursorItem)
+        self.currentSelectionItem = plotDataItem
+        self.selectionRange = [None, None]
         return plotDataItem
 
     def removePlotItem(self, plot):
         self.plotWidget.removeItem(self.cursorItem)
         self.cursorLabel.setText("")
-        self.currentItem = None
+        self.currentCursoredItem = None
+        self.currentSelectionItem = None
+        self.selectionRange = [None, None]
+        self.selectionItem.setData([], [])
         self.plotWidget.removeItem(plot)
 
     def showPlotWidget(self):
@@ -151,7 +185,7 @@ class SpectraPlot(QWidget):
             self.cursorLabel.setText(f"{x:.5}" + "; " + f"{y:.5}")
             p.addItem(self.cursorItem)
             for item in p.plotItem.allChildItems():
-                if type(item) is ScatterPlotItem:
+                if type(item) is ScatterPlotItem and item != self.selectionItem:
                     if len(item.getData()[0]) > 1:
                         for i in range(len(item.getData()[0])):
                             ppx = item.getData()[0][i]
@@ -165,15 +199,15 @@ class SpectraPlot(QWidget):
                                 self.cursorItem.setData([px], [py])
                                 self.cursorLabel.setText("[" + str(i + 1) + "] " + f"{px:.5}" + "; " + f"{py:.5}")
                                 p.addItem(self.cursorItem)
-                                self.currentItem = item
-                                self.currentItemId = i
+                                self.currentCursoredItem = item
+                                self.currentCursoredItemId = i
                                 self.signalPlotClick.emit(self.dataType)
                                 return
 
     def setCursorToId(self, dataId):
-        if self.currentItem:
-            ppx = self.currentItem.getData()[0][dataId]
-            ppy = self.currentItem.getData()[1][dataId]
+        if self.currentCursoredItem:
+            ppx = self.currentCursoredItem.getData()[0][dataId]
+            ppy = self.currentCursoredItem.getData()[1][dataId]
             p = self.plotWidget
             xLog = p.plotItem.ctrl.logXCheck.isChecked()
             yLog = p.plotItem.ctrl.logYCheck.isChecked()
@@ -183,18 +217,18 @@ class SpectraPlot(QWidget):
             self.cursorItem.setData([px], [py])
             self.cursorLabel.setText("[" + str(dataId + 1) + "] " + f"{px:.5}" + "; " + f"{py:.5}")
             p.addItem(self.cursorItem)
-            self.currentItemId = dataId
+            self.currentCursoredItemId = dataId
 
     def setCursorToNext(self):
-        if self.currentItem and self.currentItemId is not None:
-            newId = self.currentItemId + 1
-            if newId > len(self.currentItem.getData()[0]) - 1:
-                newId = len(self.currentItem.getData()[0]) - 1
+        if self.currentCursoredItem and self.currentCursoredItemId is not None:
+            newId = self.currentCursoredItemId + 1
+            if newId > len(self.currentCursoredItem.getData()[0]) - 1:
+                newId = len(self.currentCursoredItem.getData()[0]) - 1
             self.setCursorToId(newId)
 
     def setCursorToPrev(self):
-        if self.currentItem and self.currentItemId:
-            newId = self.currentItemId - 1
+        if self.currentCursoredItem and self.currentCursoredItemId:
+            newId = self.currentCursoredItemId - 1
             if newId < 0:
                 newId = 0
             self.setCursorToId(newId)
@@ -203,6 +237,36 @@ class SpectraPlot(QWidget):
     def onCopyTheory(self):
         self.signalCopyTheory.emit(self.dataType)
 
-    @ pyqtSlot()
+    @pyqtSlot()
     def onCopyExp(self):
         self.signalCopyExp.emit(self.dataType)
+
+    @pyqtSlot()
+    def onRangeStart(self):
+        self.selectionRange[0] = self.cursorItem.getData()[0]
+        self.plotSelectionRange()
+
+    @pyqtSlot()
+    def onRangeEnd(self):
+        self.selectionRange[1] = self.cursorItem.getData()[0]
+        self.plotSelectionRange()
+
+    def plotSelectionRange(self):
+        if self.currentSelectionItem is not None:
+            if self.selectionRange[0] is None or self.selectionRange[1] is None:
+                return
+            x = self.currentSelectionItem.getData()[0]
+            y = self.currentSelectionItem.getData()[1]
+            mask = (x >= self.selectionRange[0]) & (x <= self.selectionRange[1])
+            x_filtered = x[mask]
+            y_filtered = y[mask]
+            # x_filtered = x
+            # y_filtered = y
+            p = self.plotWidget
+            xLog = p.plotItem.ctrl.logXCheck.isChecked()
+            yLog = p.plotItem.ctrl.logYCheck.isChecked()
+            x_filtered_clipped = np.clip(x_filtered, a_min=None, a_max=300)
+            y_filtered_clipped = np.clip(y_filtered, a_min=None, a_max=300)
+            x_filtered = 10 ** x_filtered_clipped if xLog else x_filtered
+            y_filtered = 10 ** y_filtered_clipped if yLog else y_filtered
+            self.selectionItem.setData(x_filtered, y_filtered)

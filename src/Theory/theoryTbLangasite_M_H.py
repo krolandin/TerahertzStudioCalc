@@ -81,7 +81,7 @@ ro = 5.2
 
 ############## PARAMS
 numPoints = 40
-oneSidePointsNum = 10
+oneSidePointsNum = 20
 
 # cc = 0.0445  # Ho concentration 0.0156
 # T = 1.9
@@ -103,7 +103,7 @@ oneSidePointsNum = 10
 pi23 = 2 * PI / 3
 # dTeta = 3 * 2 * sigmaTeta / (2 * oneSidePointsNum + 1)
 # dFi = 3 * 2 * sigmaFi / (2 * oneSidePointsNum + 1)
-dDcf2 = 7 / (2 * oneSidePointsNum + 1)  # normalX
+# dDcf2 = 7 / (2 * oneSidePointsNum + 1)  # normalX
 
 
 # MvHoLang = (138.90 * (1 - cc) + 164.93 * cc) * 3 + 69.72 * 5 + 28.08 + 16 * 14
@@ -163,19 +163,20 @@ def calcM_H(H,
     My[:] = [0 for i in range(len(H))]
     Mz[:] = [0 for i in range(len(H))]
 
-    dTeta = 3 * 2 * sigmaTeta / (2 * oneSidePointsNum + 1)
-    dFi = 3 * 2 * sigmaFi / (2 * oneSidePointsNum + 1)
-    MvHoLang = (138.90 * (1 - cc) + 164.93 * cc) * 3 + 69.72 * 5 + 28.08 + 16 * 14
-    nPos = 1 / 6 * (3 * cc * NA / MvHoLang) * dTeta * dFi * dDcf2
-
     maxPos = 2 * Dcf0
     mu = maxPos - sigmaDcf2 ** 2 / maxPos
     normFactor = calcNormFactor(sigmaDcf2, mu)
+    dDcf2 = (Dcf0 + 3 * sigmaDcf2 * 0.5) / (2 * oneSidePointsNum + 1)  # normalX
+
+    dTeta = 3 * sigmaTeta / (2 * oneSidePointsNum + 1)
+    dFi = 3 * sigmaFi / (2 * oneSidePointsNum + 1)
+    MvHoLang = (138.90 * (1 - cc) + 164.93 * cc) * 3 + 69.72 * 5 + 28.08 + 16 * 14
+    nPos = 1 / 6 * (3 * cc * NA / MvHoLang) * dTeta * dFi * dDcf2
 
     for i in prange(len(H)):
         for iFi in prange(-oneSidePointsNum, oneSidePointsNum):
             for iTeta in prange(-oneSidePointsNum, oneSidePointsNum):
-                for iDcf in prange(0, 2 * oneSidePointsNum):
+                for iDcf in prange(0, 2 * oneSidePointsNum + 1):
                     for pos in prange(6):
                         vectMx, vectMy, vectMz = getVectM(pos, float32(iTeta * dTeta), float32(iFi * dFi),
                                                           tetaIon, fiIon, mIon)
@@ -197,50 +198,50 @@ def calcM_H(H,
         My[i] += hiVVab * H[i]
         Mz[i] += hiVVc * H[i]
 
-
-@guvectorize(["void(float32[:], float32, float32, float32, float32, float32, float32, float32, float32, float32, float32, float32, float32[:], float32[:], float32[:])"],
-             "(n),(),(),(),(),(),(),(),(),(),(),()->(n),(n),(n)",
-             target='parallel')
-# def calcM_H(H, Mx, My, Mz):
-def calcM_Angle(H,
-                cc, T, mIon, tetaIon, fiIon, sigmaTeta, sigmaFi, Dcf0, sigmaDcf2, hiVVc, hiVVab,
-                Mxy, Myz, Mxz):
-    Mxy[:] = [0 for i in range(len(H))]
-    Myz[:] = [0 for i in range(len(H))]
-    Mxz[:] = [0 for i in range(len(H))]
-
-    dTeta = 3 * 2 * sigmaTeta / (2 * oneSidePointsNum + 1)
-    dFi = 3 * 2 * sigmaFi / (2 * oneSidePointsNum + 1)
-    MvHoLang = (138.90 * (1 - cc) + 164.93 * cc) * 3 + 69.72 * 5 + 28.08 + 16 * 14
-    nPos = 1 / 6 * (3 * cc * NA / MvHoLang) * dTeta * dFi * dDcf2
-
-    maxPos = 2 * Dcf0
-    mu = maxPos - sigmaDcf2 ** 2 / maxPos
-    normFactor = calcNormFactor(sigmaDcf2, mu)
-
-    for i in prange(len(H)):
-        for iFi in prange(-oneSidePointsNum, oneSidePointsNum):
-            for iTeta in prange(-oneSidePointsNum, oneSidePointsNum):
-                for iDcf in prange(0, 2 * oneSidePointsNum):
-                    for pos in prange(6):
-                        vectMx, vectMy, vectMz = getVectM(pos, float32(iTeta * dTeta), float32(iFi * dFi),
-                                                          tetaIon, fiIon, mIon)
-                        dFactor = normal(iTeta * dTeta, sigmaTeta) * normal(iFi * dFi, sigmaFi) * normalX(iDcf * dDcf2,
-                                                                                                          sigmaDcf2, mu,
-                                                                                                          normFactor)
-
-                        EPos = getEPos(H[i], 0, 0, vectMx, vectMy, vectMz, float32(iDcf * dDcf2 * 0.5))
-                        # EPos = getEPos(H[i], 0, 0, vectMx, vectMy, vectMz, Dcf0)
-                        if EPos == 0: EPos = 0.0000001
-                        Mxy[i] += nPos * (vectMx ** 2 * H[i]) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
-
-                        EPos = getEPos(0, H[i], 0, vectMx, vectMy, vectMz, float32(iDcf * dDcf2 * 0.5))
-                        if EPos == 0: EPos = 0.0000001
-                        Myz[i] += nPos * (vectMy ** 2 * H[i]) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
-
-                        EPos = getEPos(0, 0, H[i], vectMx, vectMy, vectMz, float32(iDcf * dDcf2 * 0.5))
-                        if EPos == 0: EPos = 0.0000001
-                        Mxz[i] += nPos * (vectMz ** 2 * H[i]) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
-        Mxy[i] += hiVVab * H[i]
-        Myz[i] += hiVVab * H[i]
-        Mxz[i] += hiVVc * H[i]
+#
+# @guvectorize(["void(float32[:], float32, float32, float32, float32, float32, float32, float32, float32, float32, float32, float32, float32[:], float32[:], float32[:])"],
+#              "(n),(),(),(),(),(),(),(),(),(),(),()->(n),(n),(n)",
+#              target='parallel')
+# # def calcM_H(H, Mx, My, Mz):
+# def calcM_Angle(H,
+#                 cc, T, mIon, tetaIon, fiIon, sigmaTeta, sigmaFi, Dcf0, sigmaDcf2, hiVVc, hiVVab,
+#                 Mxy, Myz, Mxz):
+#     Mxy[:] = [0 for i in range(len(H))]
+#     Myz[:] = [0 for i in range(len(H))]
+#     Mxz[:] = [0 for i in range(len(H))]
+#
+#     dTeta = 3 * 2 * sigmaTeta / (2 * oneSidePointsNum + 1)
+#     dFi = 3 * 2 * sigmaFi / (2 * oneSidePointsNum + 1)
+#     MvHoLang = (138.90 * (1 - cc) + 164.93 * cc) * 3 + 69.72 * 5 + 28.08 + 16 * 14
+#     nPos = 1 / 6 * (3 * cc * NA / MvHoLang) * dTeta * dFi * dDcf2
+#
+#     maxPos = 2 * Dcf0
+#     mu = maxPos - sigmaDcf2 ** 2 / maxPos
+#     normFactor = calcNormFactor(sigmaDcf2, mu)
+#
+#     for i in prange(len(H)):
+#         for iFi in prange(-oneSidePointsNum, oneSidePointsNum):
+#             for iTeta in prange(-oneSidePointsNum, oneSidePointsNum):
+#                 for iDcf in prange(0, 2 * oneSidePointsNum):
+#                     for pos in prange(6):
+#                         vectMx, vectMy, vectMz = getVectM(pos, float32(iTeta * dTeta), float32(iFi * dFi),
+#                                                           tetaIon, fiIon, mIon)
+#                         dFactor = normal(iTeta * dTeta, sigmaTeta) * normal(iFi * dFi, sigmaFi) * normalX(iDcf * dDcf2,
+#                                                                                                           sigmaDcf2, mu,
+#                                                                                                           normFactor)
+#
+#                         EPos = getEPos(H[i], 0, 0, vectMx, vectMy, vectMz, float32(iDcf * dDcf2 * 0.5))
+#                         # EPos = getEPos(H[i], 0, 0, vectMx, vectMy, vectMz, Dcf0)
+#                         if EPos == 0: EPos = 0.0000001
+#                         Mxy[i] += nPos * (vectMx ** 2 * H[i]) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
+#
+#                         EPos = getEPos(0, H[i], 0, vectMx, vectMy, vectMz, float32(iDcf * dDcf2 * 0.5))
+#                         if EPos == 0: EPos = 0.0000001
+#                         Myz[i] += nPos * (vectMy ** 2 * H[i]) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
+#
+#                         EPos = getEPos(0, 0, H[i], vectMx, vectMy, vectMz, float32(iDcf * dDcf2 * 0.5))
+#                         if EPos == 0: EPos = 0.0000001
+#                         Mxz[i] += nPos * (vectMz ** 2 * H[i]) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
+#         Mxy[i] += hiVVab * H[i]
+#         Myz[i] += hiVVab * H[i]
+#         Mxz[i] += hiVVc * H[i]

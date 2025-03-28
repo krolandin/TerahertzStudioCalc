@@ -8,6 +8,8 @@ import pickle
 from theoryModels import Model
 from dataTypes import DataTypes, FileTypes
 from theoryTypes import TheoryType
+from PyQt5.QtWidgets import QFileDialog, QWidget
+from ascManager import parse_asc_data
 
 
 class FileManager:
@@ -37,6 +39,8 @@ def readSpectraFile(f):
         return readMANG(f)
     elif fileExt == ".IRR":
         return readBrukerReflection(f)
+    elif fileExt == ".ASC":
+        return readASC(f)
     else:
         return None
     # self.statusbar.showMessage("Loaded: " + Path(f).name)
@@ -56,6 +60,8 @@ def getFileType(f):
         return FileTypes.MTeta
     elif fileExt == ".IRR":
         return FileTypes.RPhRf
+    elif fileExt == ".ASC":
+        return FileTypes.asc
     else:
         return None
 
@@ -113,7 +119,18 @@ def readDatFile(f):
                 spectrum.yValues.append(values[pointNum])
 
             spectra.append(spectrum)
-    file.close
+    file.close()
+    return spectra
+
+
+def readASC(f):
+    try:
+        file = open(f, "rb")
+    except FileNotFoundError:
+        return []
+    text = file.read().decode('utf-8')
+    spectra = parse_asc_data(text)
+    file.close()
     return spectra
 
 
@@ -280,7 +297,7 @@ def readTwoColText(f, fileType, dataType):
     return spectra
 
 
-def saveExperimentFiles(spectra, fileType):
+def saveExperimentFiles(spectra, fileType, q_widget):
     spectraByFile = {}
     for spectrum in spectra:
         if spectrum.fileType == fileType:
@@ -308,51 +325,72 @@ def saveExperimentFiles(spectra, fileType):
                         file.write(" " + f"{spectraSignal.xValues[i]:.5f}" +
                                    "    " + f"{spectraSignal.temperature:.2f}" +
                                    "     " + f"{spectraSignal.temperature:.2f}" +
-                                   "   " + f"{spectraSignal.yValues[i]:.8f}" +
-                                   ("  " + f"{spectraMirror.yValues[i]:.5f}" if spectraMirror is not None else "") +
+                                   "   " + f"{spectraSignal.yValues[i]:.5f}" +
+                                   ("  " + f"{spectraMirror.yValues[i]:.4f}" if spectraMirror is not None else "") +
                                    "\n")
                     file.close()
-        if spectraSignal.dataType == DataTypes.Trf:
-            p = Path(filePath)
-            parent = p.parents[0]
-            stem = p.stem
-            ext = p.suffix
-            fileBytes = bytearray()
-            with open(str(parent) + "\\" + str(stem) + str(ext), 'wb') as file:
-                fileBytes.append(10)  # byte. first step
-                for spectrum in spectra:
-                    fileBytes.append(2)  # byte
-                    fileBytes.extend(bytes("hd", 'UTF-8'))  # string. Header
-                    fileBytes.extend(bytearray(struct.pack("h", len(spectrum.xValues))))  # short. Number of points
-                    spectrum.spectrumName = spectrum.spectrumName[0:64]  # only first 64 symbols
-                    fileBytes.append(len(spectrum.spectrumName))  # byte. spectrumName length
-                    fileBytes.extend(bytes(spectrum.spectrumName, 'UTF-8'))  # string. spectrumName
-                    fileBytes.extend(bytearray(64 - len(spectrum.spectrumName)))  # bytes. spectrumName empty space
-                    fileBytes.append(10)  # byte. step
-                    spectrum.date = spectrum.date[0:14]  # only first 14 symbols
-                    # fileBytes.append(len(spectrum.date))  # byte. date length
-                    fileBytes.extend(bytes(spectrum.date, 'UTF-8'))  # string. date
-                    fileBytes.extend(bytearray(14 - len(spectrum.date)))  # bytes. date empty space
-                    for xValue in spectrum.xValues:
-                        fileBytes.extend(bytearray(struct.pack("f", xValue)))  # float. Frequency
-                    fileBytes.append(2)  # byte
-                    if spectrum.dataType == DataTypes.Trf:
-                        hd = "tr"
-                    elif spectrum.dataType == DataTypes.Phf:
-                        hd = "pt"
-                    fileBytes.extend(bytes(hd, 'UTF-8'))  # string. Header data type
-                    spectrum.sampleName = spectrum.sampleName[0:14]  # only first 14 symbols
-                    fileBytes.append(len(spectrum.sampleName))  # byte. sampleName length
-                    fileBytes.extend(bytes(spectrum.sampleName, 'UTF-8'))  # string. sampleName
-                    fileBytes.extend(bytearray(14 - len(spectrum.sampleName)))  # bytes. sampleName empty space
-                    fileBytes.extend(bytearray(struct.pack("f", spectrum.temperature)))  # float. temperature
-                    fileBytes.extend(bytearray(struct.pack("f", spectrum.thickness)))  # float. thickness
-                    for yValue in spectrum.yValues:
-                        fileBytes.extend(bytearray(struct.pack("f", yValue)))  # float. Tr or Ph
+            if spectraSignal.dataType == DataTypes.Trf:
+                p = Path(filePath)
+                if len(p.parents) == 0:
+                    file_path, _ = QFileDialog.getSaveFileName(
+                        q_widget,  # Родительский виджет
+                        "Select or Create File",  # Заголовок диалога
+                        "dat",  # Начальная директория
+                        "DAT Files (*.dat)"  # Фильтр для файлов с расширением .dat
+                    )
+                    # Проверяем, был ли выбран файл
+                    if file_path:
+                        # Если файл не существует, создаем его
+                        if not file_path.endswith('.dat'):
+                            file_path += '.dat'  # Добавляем расширение, если его нет
+                        # Открываем файл для записи (если файл не существует, он будет создан)
+                        with open(file_path, 'w') as file:
+                            file.write("")  # Записываем пустую строку (или любые другие данные)
+                        print(f"Файл создан или выбран: {file_path}")
+                        p = Path(file_path)
+                        parent = p.parents[0]
+                    else:
+                        return
+                else:
+                    parent = p.parents[0]
+                stem = p.stem
+                ext = p.suffix
+                fileBytes = bytearray()
+                with open(str(parent) + "\\" + str(stem) + str(ext), 'wb') as file:
+                    fileBytes.append(10)  # byte. first step
+                    for spectrum in spectra:
+                        fileBytes.append(2)  # byte
+                        fileBytes.extend(bytes("hd", 'UTF-8'))  # string. Header
+                        fileBytes.extend(bytearray(struct.pack("h", len(spectrum.xValues))))  # short. Number of points
+                        spectrum.spectrumName = spectrum.spectrumName[0:64]  # only first 64 symbols
+                        fileBytes.append(len(spectrum.spectrumName))  # byte. spectrumName length
+                        fileBytes.extend(bytes(spectrum.spectrumName, 'UTF-8'))  # string. spectrumName
+                        fileBytes.extend(bytearray(64 - len(spectrum.spectrumName)))  # bytes. spectrumName empty space
+                        fileBytes.append(10)  # byte. step
+                        spectrum.date = spectrum.date[0:14]  # only first 14 symbols
+                        # fileBytes.append(len(spectrum.date))  # byte. date length
+                        fileBytes.extend(bytes(spectrum.date, 'UTF-8'))  # string. date
+                        fileBytes.extend(bytearray(14 - len(spectrum.date)))  # bytes. date empty space
+                        for xValue in spectrum.xValues:
+                            fileBytes.extend(bytearray(struct.pack("f", xValue)))  # float. Frequency
+                        fileBytes.append(2)  # byte
+                        if spectrum.dataType == DataTypes.Trf:
+                            hd = "tr"
+                        elif spectrum.dataType == DataTypes.Phf:
+                            hd = "pt"
+                        fileBytes.extend(bytes(hd, 'UTF-8'))  # string. Header data type
+                        spectrum.sampleName = spectrum.sampleName[0:14]  # only first 14 symbols
+                        fileBytes.append(len(spectrum.sampleName))  # byte. sampleName length
+                        fileBytes.extend(bytes(spectrum.sampleName, 'UTF-8'))  # string. sampleName
+                        fileBytes.extend(bytearray(14 - len(spectrum.sampleName)))  # bytes. sampleName empty space
+                        fileBytes.extend(bytearray(struct.pack("f", spectrum.temperature)))  # float. temperature
+                        fileBytes.extend(bytearray(struct.pack("f", spectrum.thickness)))  # float. thickness
+                        for yValue in spectrum.yValues:
+                            fileBytes.extend(bytearray(struct.pack("f", yValue)))  # float. Tr or Ph
 
-                file.write(fileBytes)
-                file.close()
-        # save file for ".DAT" and ".FDP" only
+                    file.write(fileBytes)
+                    file.close()
+            # save file for ".DAT" and ".FDP" only
 
 
 def saveTheory(theory, directory, tables):
@@ -373,7 +411,6 @@ def saveTheory(theory, directory, tables):
             models.append({"name": model.name, "text": model.listItem.text(), "parameters": modelParameters})
         experiments = []
         for table in tables:
-            table.onSaveAll()
             for spectra in table.selectedPlotsBySpectra:
                 experiments.append({"filePath": spectra.filePath, "inFileNum": spectra.inFileNum})
         theoryObject = {"name": theory.name, "parameters": parameters, "models": models, "experiments": experiments}
@@ -384,25 +421,19 @@ def loadTheory(filePath):
     if Path(filePath).is_file():
         with open(filePath, 'rb') as file:
             theoryDict = pickle.load(file)
-
-            if theoryDict["name"] in TheoryType.types:
-                theory = TheoryType.types[theoryDict["name"]]()
-                theory.directory = os.path.relpath(os.path.dirname(filePath), start=os.curdir)
-                theory.text = Path(filePath).stem
-                for i in range(len(theoryDict["parameters"])):
-                    if i >= len(theory.parameters): break
-                    theory.parameters[i].value = theoryDict["parameters"][i]
-                    theory.parameters[i].numberEdit.resetValue(theory.parameters[i].value)
-                for modelDict in theoryDict["models"]:
-                    model = Model(modelDict["name"])
-                    model.text = modelDict["text"]
-                    for i in range(len(modelDict["parameters"])):
-                        model.parameters[i].value = modelDict["parameters"][i]
-                        model.parameters[i].numberEdit.resetValue(model.parameters[i].value)
-                    theory.models.append(model)
-            else:
-                theory = TheoryType.types["Ho LGS DistrAngleDcf"]()
-
+            theory = TheoryType.types[theoryDict["name"]]()
+            theory.directory = os.path.relpath(os.path.dirname(filePath), start=os.curdir)
+            theory.text = Path(filePath).stem
+            for i in range(len(theoryDict["parameters"])):
+                theory.parameters[i].value = theoryDict["parameters"][i]
+                theory.parameters[i].numberEdit.resetValue(theory.parameters[i].value)
+            for modelDict in theoryDict["models"]:
+                model = Model(modelDict["name"])
+                model.text = modelDict["text"]
+                for i in range(len(modelDict["parameters"])):
+                    model.parameters[i].value = modelDict["parameters"][i]
+                    model.parameters[i].numberEdit.resetValue(model.parameters[i].value)
+                theory.models.append(model)
             experiments = []
             for experiment in theoryDict["experiments"]:
                 experiments.append({"filePath": experiment["filePath"], "inFileNum": experiment["inFileNum"]})

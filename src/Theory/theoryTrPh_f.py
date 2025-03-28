@@ -27,7 +27,7 @@ class TheoryTrPh_f(Theory):
         self.parameters = [self.d, self.epsInf1, self.epsInf2, self.muInf1,
                            self.f_Start, self.f_End]
 
-        self.modelTypes = [Model.OSCILLATOR, Model.MAGNET_OSCILLATOR]
+        self.modelTypes = [Model.OSCILLATOR, Model.MAGNET_OSCILLATOR, Model.RELAXATOR, Model.DRUDE]
 
         self.f = None  # frequencies array, cm
         self.tr_f = None  # transmittance
@@ -57,6 +57,10 @@ class TheoryTrPh_f(Theory):
                     f0 = model.f0.value
                     mu_i += model.deltaMu.value * f0 ** 2 / (
                             f0 ** 2 - self.f[i] ** 2 - complex(0, model.gamma.value * self.f[i]))
+                if model.name == Model.RELAXATOR:
+                    eps_i += model.deltaEps.value / (1 - complex(0, self.f[i]/model.f0.value))
+                if model.name == Model.DRUDE:
+                    eps_i += 1j*4*math.pi*model.sigma.value*model.gamma.value/(self.f[i]*(model.gamma.value-1j*self.f[i]))
             eps.append(eps_i)
             mu.append(mu_i)
         self.tr_f = []
@@ -91,3 +95,22 @@ class TheoryTrPh_f(Theory):
         fiT = A - math.atan(b * (a ** 2 + b ** 2 - 1) / ((a ** 2 + b ** 2) * (2 + a) + a)) + math.atan(
             (R * E * math.sin(2 * A + 2 * fiR)) / (1 - R * E * math.cos(2 * A + 2 * fiR)))
         return T, fiT
+
+    def getModelsString(self):
+        theoryStr = ""
+        theoryStr += "\t" + str(self.d.value)
+        theoryStr += "\t" + str(self.epsInf1.value)
+        theoryStr += "\t" + str(self.epsInf2.value)
+        theoryStr += "\t" + str(self.muInf1.value)
+
+        for m in self.models:
+            if m.name == m.MAGNET_OSCILLATOR:
+                theoryStr += "\t" + str(m.deltaMu.value)
+                theoryStr += "\t" + str(m.f0.value)
+                theoryStr += "\t" + str(m.gamma.value)
+            if m.name == m.OSCILLATOR:
+                theoryStr += "\t" + str(m.deltaEps.value)
+                theoryStr += "\t" + str(m.f0.value)
+                theoryStr += "\t" + str(m.gamma.value)
+
+        return theoryStr

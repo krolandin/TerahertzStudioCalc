@@ -35,8 +35,6 @@ def getDataTypeAttributes(types, dataType):
             attributes = DataTypeAttributes(nameY="Reflectivity", nameX="Frequency, cm<sup>-1</sup>")
         elif dataType == DataTypes.PhR_f:
             attributes = DataTypeAttributes(nameY="Phase, rad", nameX="Frequency, cm<sup>-1</sup>")
-        elif dataType == DataTypes.dMu_H:
-            attributes = DataTypeAttributes(nameY="Δμ''", nameX="Magnetic field, Oe")
         else:
             attributes = DataTypeAttributes(nameY="TestY, units", nameX="TestX, units")
     else:
@@ -58,4 +56,5 @@ class FileTypes:
     MT = "M_T"
     MTeta = "M_Teta"
     RPhRf = "RPhR_f"
-    types = [TrPhf, TrPhH, MH, MT, MTeta, RPhRf]
+    asc = "asc"
+    types = [TrPhf, TrPhH, MH, MT, MTeta, RPhRf, asc]

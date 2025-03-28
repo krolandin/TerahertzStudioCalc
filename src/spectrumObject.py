@@ -1,4 +1,5 @@
 from array import array
+import numpy as np
 
 
 class SpectrumObject:
@@ -28,5 +29,18 @@ class SpectrumObject:
         self.color = None
         self.dataRow = 0
 
+        self.plot = None
 
+        # self.dataPointSizes = None
 
+    # def setDataPointSizes(self, xValues, yValues):
+    #     self.xValues = xValues
+    #     self.yValues = yValues
+    #
+    #     # x = np.linspace(0, 10, 100)
+    #     # y = np.sin(x)
+    #     x_min, x_max = 30, 70
+    #     mask = (xValues >= x_min) & (xValues <= x_max)
+    #
+    #     self.dataPointSizes = np.ones(len(xValues)) * 6  # Базовый размер
+    #     self.dataPointSizes[mask] = 10  # Увеличенный размер

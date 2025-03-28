@@ -1,5 +1,7 @@
+import array
+
 from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QFont
 from PyQt5.QtCore import QObject, pyqtSignal, Qt, pyqtSlot
 from PyQt5.QtWidgets import QTableView, QStyledItemDelegate, QMenu, \
     QWidget, QAction, QVBoxLayout, QLabel, \
@@ -8,16 +10,16 @@ from numberLineEdit import NumberLineEdit
 from fileManager import FileManager, getFileType, saveExperimentFiles
 import clipboard
 from dataTypes import DataTypes
-from pathlib import Path
-import os
-import subprocess
+
+import numpy as np
+
 
 class SpectraTable(QWidget):
     signalCellClick = pyqtSignal(int, int, str)
 
     # signalClearSelection = pyqtSignal()
 
-    def __init__(self, tableWidget, fileType, buttonsLayout, plotByType):
+    def __init__(self, tableWidget, fileType, buttonsLayout, plotByType, container, experimentName):
         super(QObject, self).__init__()
         self.menu = None
         self.tableWidget = tableWidget
@@ -30,6 +32,10 @@ class SpectraTable(QWidget):
         self.currentSelectedSpectrum = None
         self.newSpectraAdded = False
         self.rightClickSpectrum = None
+        self.container = container
+        self.experimentName = experimentName
+        self.listItem = None
+
 
         # ###################### BUTTONS ####################
         clearTableButton = QPushButton("Clear table")
@@ -68,11 +74,8 @@ class SpectraTable(QWidget):
 
         def updateNumber(num):
             spectrum = self.currentSelectedSpectrum
-            if spectrum:
-                tup = self.updateCorrection(spectrum.xValues, spectrum.yValues, self.numberEdit.value)
-                newXValues = tup[0]
-                newYValues = tup[1]
-
+            if spectrum and spectrum in self.selectedPlotsBySpectra:
+                newXValues, newYValues = self.getRangeCorrectionValues(spectrum)
                 if spectrum.dataType == DataTypes.Trf:
                     xValues = newXValues
                     yValues = newYValues
@@ -85,10 +88,9 @@ class SpectraTable(QWidget):
                 elif spectrum.dataType == DataTypes.MirrorH:
                     xValues = [newXValues[i] * 1e4 for i in range(spectrum.numPoints)]
                     yValues = [-newYValues[i] for i in range(spectrum.numPoints)]
-                try:
-                    self.selectedPlotsBySpectra[spectrum].setData(xValues, yValues)
-                except KeyError:
-                    print("spectraTable.py/updateNumber(num): KeyError. Key: " + spectrum.dataType)
+                # if spectrum in self.selectedPlotsBySpectra:
+                self.selectedPlotsBySpectra[spectrum].setData(xValues, yValues)
+                spectrum.plot.plotSelectionRange()
 
         numberEdit.signalUpdateNumber.connect(updateNumber)
         # ###################### NUMBER EDITOR ####################
@@ -103,24 +105,18 @@ class SpectraTable(QWidget):
         # self.tableWidget.verticalHeader().setVisible(False)
 
         self.tableWidget.setSelectionBehavior(QTableView.SelectRows)
-        # self.tableWidget.setEditTriggers(QTableView.NoEditTriggers)
-        # https://doc.qt.io/qt-5/qabstractitemview.html#EditTrigger-enum
 
         self.tableWidget.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
         self.tableWidget.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
 
-        # self.tableWidget.cellClicked.connect(self.tableWidget_click)
         self.tableWidget.itemClicked.connect(self.onClickTableItem)
-        # self.tableWidget.itemSelectionChanged.connect(self.tableWidget_select)
         self.tableWidget.horizontalHeader().sectionClicked.connect(self.onColHeaderClicked)
         self.tableWidget.verticalHeader().sectionClicked.connect(self.onRowHeaderClicked)
 
         delegate = ReadOnlyDelegate(self.tableWidget)
         self.tableWidget.setItemDelegateForColumn(self.labels.index("Color"), delegate)  # readonly for column
-
         self.tableWidget.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.tableWidget.customContextMenuRequested.connect(self.generateMenu)
-
         self.tableWidget.viewport().installEventFilter(self)
 
     @pyqtSlot()
@@ -140,7 +136,7 @@ class SpectraTable(QWidget):
     @pyqtSlot()
     def onSaveAll(self):
         self.saveCorrection()
-        saveExperimentFiles(self.spectra, self.fileType)
+        saveExperimentFiles(self.spectra, self.fileType, self)
 
     def clearSelectedSpectraPlots(self):
         for spectrum in self.selectedPlotsBySpectra:
@@ -150,6 +146,9 @@ class SpectraTable(QWidget):
             plot = self.plotByType[spectrum.dataType]
             plot.removePlotItem(self.selectedPlotsBySpectra[spectrum])
         self.selectedPlotsBySpectra.clear()
+        font = QFont()
+        font.setBold(len(self.selectedPlotsBySpectra) > 0)
+        self.listItem.setFont(font)
 
     def fillTable(self):
         row = 0
@@ -171,7 +170,6 @@ class SpectraTable(QWidget):
             self.tableWidget.setVerticalHeaderItem(row, QtWidgets.QTableWidgetItem(str(spectrum.inFileNum)))
 
             row += 1
-        # self.signalClearSelection.emit()
         self.clearSelectedSpectraPlots()
 
     def setItem(self, row, headerName, value):
@@ -196,8 +194,6 @@ class SpectraTable(QWidget):
 
     @pyqtSlot()
     def onRowHeaderClicked(self, logicalIndex=None):
-        # print("Row " + str(logicalIndex))
-        # self.selectRow(logicalIndex, 0)
         if logicalIndex is not None:
             self.signalCellClick.emit(logicalIndex, 0)
 
@@ -215,46 +211,50 @@ class SpectraTable(QWidget):
                 newXValues[i] = xValues[i] + num
         return newXValues, newYValues
 
+    def getRangeCorrectionValues(self, spectrum):
+        x, y = self.updateCorrection(spectrum.xValues, spectrum.yValues, self.numberEdit.value)
+        if spectrum.plot.selectionRange[0] is not None and spectrum.plot.selectionRange[1] is not None:
+            x_min = spectrum.plot.selectionRange[0]
+            x_max = spectrum.plot.selectionRange[1]
+            if spectrum.dataType == DataTypes.Trf:
+                pass
+            elif spectrum.dataType == DataTypes.Phf:
+                pass
+            elif spectrum.dataType == DataTypes.SignalH:
+                x_min = spectrum.plot.selectionRange[0] * 1e-4
+                x_max = spectrum.plot.selectionRange[1] * 1e-4
+            elif spectrum.dataType == DataTypes.MirrorH:
+                x_min = spectrum.plot.selectionRange[0] * 1e-4
+                x_max = spectrum.plot.selectionRange[1] * 1e-4
+
+            corr_x = np.where((x >= x_min) & (x <= x_max), x, spectrum.xValues)
+            corr_y = np.where((x >= x_min) & (x <= x_max), y, spectrum.yValues)
+        else:
+            corr_x = x
+            corr_y = y
+        return corr_x, corr_y
+
     def saveCorrection(self):
         spectrum = self.currentSelectedSpectrum
         if spectrum and self.correctionWidget.isVisible():
-            tup = self.updateCorrection(spectrum.xValues, spectrum.yValues, self.numberEdit.value)
+            # tup = self.updateCorrection(spectrum.xValues, spectrum.yValues, self.numberEdit.value)
+            tup = self.getRangeCorrectionValues(spectrum)
             spectrum.xValues = tup[0]
             spectrum.yValues = tup[1]
             self.currentSelectedSpectrum = None
-            # self.rightClickSpectrum = None
             self.correctionWidget.setVisible(False)
-    def saveCorrectionForAutoShift(self):
-        spectrum = self.currentSelectedSpectrum
-        if spectrum:
-            tup = self.updateCorrection(spectrum.xValues, spectrum.yValues, self.numberEdit.value)
-            spectrum.xValues = tup[0]
-            spectrum.yValues = tup[1]
-            self.currentSelectedSpectrum = None
-            # self.rightClickSpectrum = None
-            self.correctionWidget.setVisible(False)
-            print("saveCorrectionForAutoShift")
 
-
-    ######################  Context (right click) menu ######################
     def eventFilter(self, source, event):
         if (event.type() == QtCore.QEvent.MouseButtonPress and
                 event.buttons() == QtCore.Qt.RightButton and
                 source is self.tableWidget.viewport()):
             item = self.tableWidget.itemAt(event.pos())
             if item is not None:
-                # print('Table Item:', item.row(), item.column())
                 self.rightClickSpectrum = self.spectra[item.row()]
                 self.menu = QMenu(self)
-                # impMenu = QMenu('Import', self)
-                # impAct = QAction('Import mail', self)
-                # impMenu.addAction(impAct)
                 copyAction = QAction('Copy', self)
                 copyAction.triggered.connect(self.onCopyToClipboard)
                 self.menu.addAction(copyAction)
-                action = QAction("Open file", self)
-                self.menu.addAction(action)
-                action.triggered.connect(self.onExplore)
                 self.menu.addSeparator()
                 shiftYAction = QAction('Correction Y: add', self)
                 shiftYAction.triggered.connect(self.onCorrectionYShift)
@@ -269,8 +269,6 @@ class SpectraTable(QWidget):
                 shiftXAction.triggered.connect(self.onCorrectionXShift)
                 self.menu.addAction(shiftXAction)
 
-                # self.menu.addMenu(impMenu)
-                # self.menu.addAction(ActionSize(self.menu, None))
         return super(SpectraTable, self).eventFilter(source, event)
 
     def generateMenu(self, pos):
@@ -286,24 +284,12 @@ class SpectraTable(QWidget):
             clipboard.copy(spectrumStr)
 
     @pyqtSlot()
-    def onExplore(self):
-        if self.rightClickSpectrum:
-            # filePath = os.path.abspath(os.path.dirname(self.rightClickSpectrum.filePath))
-            filePath = os.path.abspath(self.rightClickSpectrum.filePath)
-            if os.path.isfile(filePath):
-                path = os.path.realpath(filePath)
-                # print(path)
-                # subprocess.Popen(r'explorer /select,"' + path + '"')
-                os.startfile(path)
-
-    @pyqtSlot()
     def onCorrectionYShift(self):
         if self.rightClickSpectrum in self.selectedPlotsBySpectra:
             self.saveCorrection()
             self.correctionWidget.setVisible(True)
             self.correctionType = "Y+"
             self.numberEdit.resetValue(0)
-            # if self.rightClickSpectrum:
             text = self.rightClickSpectrum.dataType + " Y+"
             self.correctionLabel.setText(text)
             self.currentSelectedSpectrum = self.rightClickSpectrum
@@ -315,7 +301,6 @@ class SpectraTable(QWidget):
             self.correctionWidget.setVisible(True)
             self.correctionType = "Y*"
             self.numberEdit.resetValue(1)
-            # if self.rightClickSpectrum:
             text = self.rightClickSpectrum.dataType + " Y*"
             self.correctionLabel.setText(text)
             self.currentSelectedSpectrum = self.rightClickSpectrum
@@ -327,7 +312,6 @@ class SpectraTable(QWidget):
             self.correctionWidget.setVisible(True)
             self.correctionType = "Y+X*"
             self.numberEdit.resetValue(0)
-            # if self.rightClickSpectrum:
             text = self.rightClickSpectrum.dataType + " Y+X*"
             self.correctionLabel.setText(text)
             self.currentSelectedSpectrum = self.rightClickSpectrum
@@ -339,11 +323,9 @@ class SpectraTable(QWidget):
             self.correctionWidget.setVisible(True)
             self.correctionType = "X+"
             self.numberEdit.resetValue(0)
-            # if self.rightClickSpectrum:
             text = self.rightClickSpectrum.dataType + " X+"
             self.correctionLabel.setText(text)
             self.currentSelectedSpectrum = self.rightClickSpectrum
-    ######################  Context (right click) menu ######################
 
 
 class ReadOnlyDelegate(QStyledItemDelegate):

@@ -92,8 +92,8 @@ class TheoryTrPh_f_RPh_f(Theory):
         ab = (mu / eps) ** 0.5
         a = ab.real
         b = ab.imag
-        A = 2 * self.PI * n * self.d.value * f  # w_Hz = w_cm-1 * LIGHT_SPEED
-        E = math.exp(-4 * self.PI * k * self.d.value * f)  # w_Hz = w_cm-1 * LIGHT_SPEED
+        A = 2 * self.PI * n * self.d.value * f  # w_Hz = w_cm-1 * LIGHT_SPEED!!!
+        E = math.exp(-4 * self.PI * k * self.d.value * f)  # w_Hz = w_cm-1 * LIGHT_SPEED!!!
         R = ((a - 1) ** 2 + b ** 2) / ((a + 1) ** 2 + b ** 2)
         fiR = math.atan((2 * b) / (a ** 2 + b ** 2 - 1))
         T = E * ((1 - R) ** 2 + 4 * R * (math.sin(fiR)) ** 2) / (

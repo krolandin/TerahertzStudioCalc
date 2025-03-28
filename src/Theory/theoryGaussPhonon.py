@@ -102,7 +102,6 @@ class TheoryGaussPhonon(Theory):
             self.r_f.append(R)
             self.rph_f.append(fiR)
 
-
         self.updateCurvePoints(self.f, self.tr_f, DataTypes.Trf)
         self.updateCurvePoints(self.f, self.ph_f, DataTypes.Phf)
         self.updateCurvePoints(self.f, self.r_f, DataTypes.R_f)
@@ -121,8 +120,8 @@ class TheoryGaussPhonon(Theory):
         fiR = math.atan((2 * b) / (a ** 2 + b ** 2 - 1))
         T = E * ((1 - R) ** 2 + 4 * R * (math.sin(fiR)) ** 2) / (
                 (1 - R * E) ** 2 + 4 * R * E * (math.sin(A + fiR)) ** 2)
-        if T < 1e-6:  # value limitation for logarithmic scale use
-            T = 1e-6
+        if T < 1e-50:  # value limitation for logarithmic scale use
+            T = 1e-50
         fiT = A - math.atan(b * (a ** 2 + b ** 2 - 1) / ((a ** 2 + b ** 2) * (2 + a) + a)) + math.atan(
             (R * E * math.sin(2 * A + 2 * fiR)) / (1 - R * E * math.cos(2 * A + 2 * fiR)))
         return T, fiT, R, fiR

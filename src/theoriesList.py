@@ -7,8 +7,6 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot, QRegExp
 from modelsList import ModelsListWidget
 from fileManager import saveTheory
 from PyQt5.QtGui import QRegExpValidator, QColor
-import clipboard
-from fileManager import saveExperimentFiles
 
 
 class TreeWidgetDelegate(QItemDelegate):
@@ -54,13 +52,6 @@ class TheoriesListWidget(QListWidget):
         actionRemoveSelected = QAction("Remove selected", self)
         context.addAction(actionRemoveSelected)
         actionRemoveSelected.triggered.connect(self.onRemoveSelected)
-        context.addSeparator()
-        action = QAction("Copy parameters", self)
-        context.addAction(action)
-        action.triggered.connect(self.onCopyParameters)
-        action = QAction("Paste parameters", self)
-        context.addAction(action)
-        action.triggered.connect(self.onPasteParameters)
         context.addSeparator()
         for theoryName in self.theoryTypes:
             action = QAction(theoryName, self)
@@ -113,7 +104,7 @@ class TheoriesListWidget(QListWidget):
                                                                              name=theory.text,
                                                                              pen=pg.mkPen(color))
             # self.plotByType[dataType].showPlotWidget()
-            self.signalTheorySelected.emit()
+        self.signalTheorySelected.emit()
 
     def contextMenuEvent(self, e):
         self.contex.exec(e.globalPos())
@@ -166,26 +157,6 @@ class TheoriesListWidget(QListWidget):
                 self.plotByType[curve.dataType].removePlotItem(curve.plotItem)
             self.theories.remove(theory)
             self.takeItem(self.row(listItem))
-
-    @pyqtSlot()
-    def onCopyParameters(self):
-        if len(self.selectedItems()) > 0:
-            listItem = self.selectedItems()[0]
-            theory = self.getTheoryByListItem(listItem)
-            dataString = ""
-            for parameter in theory.parameters:
-                dataString += str(parameter.value) + "\t"
-            clipboard.copy(dataString)
-
-    @pyqtSlot()
-    def onPasteParameters(self):
-        if len(self.selectedItems()) > 0:
-            listItem = self.selectedItems()[0]
-            theory = self.getTheoryByListItem(listItem)
-            dataArray = clipboard.paste().split("\t")
-            for i in range(len(theory.parameters)):
-                theory.parameters[i].value = float(dataArray[i])
-                theory.parameters[i].numberEdit.resetValue(theory.parameters[i].value)
 
     @pyqtSlot()
     def itemSelected(self):

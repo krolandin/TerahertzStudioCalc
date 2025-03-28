@@ -93,9 +93,6 @@ class NumberLineEdit(QLineEdit):
             direction = 1
         elif event.key() == Qt.Key_Down:
             direction = -1
-        elif event.key() == Qt.Key_Q:
-            # print("keyPressEvent Q")
-            return
         else:
             super(NumberLineEdit, self).keyPressEvent(event)
             return

@@ -18,14 +18,24 @@ class TheoryTbLGS_M_teta(Theory):
         self.color = QColor(0x0000FF)
 
         ################### v PARAMETERS v ###################
-        self.Concentration = TheoryParameter(0.0445, "Concentration", "")
         self.Temperature = TheoryParameter(1.9, "Temperature", "K")
-        self.mIon = TheoryParameter(9.51, "mIon", "muB")
-        self.tetaIon = TheoryParameter(58.16, "tetaIon", "deg")
-        self.fiIon = TheoryParameter(63.43, "fiIon", "deg")
-        self.sigmaTeta = TheoryParameter(8, "sigmaTeta", "deg")
-        self.sigmaFi = TheoryParameter(14, "sigmaFi", "deg")
-        self.Dcf0 = TheoryParameter(1, "Dcf0", "cm-1")
+
+        self.Concentration1 = TheoryParameter(0.0445, "Concentration 1", "")
+        self.mIon1 = TheoryParameter(9.51, "mIon 1", "muB")
+        self.tetaIon1 = TheoryParameter(58.16, "tetaIon 1", "deg")
+        self.fiIon1 = TheoryParameter(63.43, "fiIon 1", "deg")
+        self.sigmaTeta1 = TheoryParameter(8, "sigmaTeta 1", "deg")
+        self.sigmaFi1 = TheoryParameter(14, "sigmaFi 1", "deg")
+        self.Dcf01 = TheoryParameter(1, "Dcf0 1", "cm-1")
+
+        self.Concentration2 = TheoryParameter(0.0445, "Concentration 2", "")
+        self.mIon2 = TheoryParameter(9.51, "mIon 2", "muB")
+        self.tetaIon2 = TheoryParameter(58.16, "tetaIon 2", "deg")
+        self.fiIon2 = TheoryParameter(63.43, "fiIon 2", "deg")
+        self.sigmaTeta2 = TheoryParameter(8, "sigmaTeta 2", "deg")
+        self.sigmaFi2 = TheoryParameter(14, "sigmaFi 2", "deg")
+        self.Dcf02 = TheoryParameter(1, "Dcf0 2", "cm-1")
+
         # self.sigmaDcf2 = TheoryParameter(2.5, "sigmaDcf2", "cm-1")
         self.hiVVc = TheoryParameter(3.5E-6, "hiVVc", "")
         self.hiVVab = TheoryParameter(4.2E-6, "hiVVab", "")
@@ -36,8 +46,10 @@ class TheoryTbLGS_M_teta(Theory):
         self.shiftXZ = TheoryParameter(0, "shiftXZ", "deg")
         self.shiftXY = TheoryParameter(0, "shiftXY", "deg")
 
-        self.parameters = [self.Concentration, self.Temperature, self.mIon, self.tetaIon, self.fiIon, self.sigmaTeta,
-                           self.sigmaFi, self.Dcf0, self.hiVVc, self.hiVVab,
+        self.parameters = [self.Temperature,
+                           self.Concentration1, self.mIon1, self.tetaIon1, self.fiIon1, self.sigmaTeta1, self.sigmaFi1, self.Dcf01,
+                           self.Concentration2, self.mIon2, self.tetaIon2, self.fiIon2, self.sigmaTeta2, self.sigmaFi2, self.Dcf02,
+                           self.hiVVc, self.hiVVab,
                            self.H_Rot,
                            self.shiftXY, self.shiftYZ, self.shiftXZ]
         ################### ^ PARAMETERS ^ ###################
@@ -62,10 +74,16 @@ class TheoryTbLGS_M_teta(Theory):
     def calcData_H(self):
         teta = np.array([i * (180) / 180 for i in range(180)], dtype=np.float32)
         Mxy, Myz, Mxz = calcM_Angle(teta,
-                                    self.Concentration.value, self.Temperature.value, self.mIon.value * muB,
-                                    self.tetaIon.value * PI / 180, self.fiIon.value * PI / 180,
-                                    self.sigmaTeta.value * PI / 180,
-                                    self.sigmaFi.value * PI / 180, self.Dcf0.value,
+                                    self.Temperature.value,
+
+                                    self.Concentration1.value, self.mIon1.value * muB,
+                                    self.tetaIon1.value * PI / 180, self.fiIon1.value * PI / 180,
+                                    self.sigmaTeta1.value * PI / 180, self.sigmaFi1.value * PI / 180, self.Dcf01.value,
+
+                                    self.Concentration2.value, self.mIon2.value * muB,
+                                    self.tetaIon2.value * PI / 180, self.fiIon2.value * PI / 180,
+                                    self.sigmaTeta2.value * PI / 180, self.sigmaFi2.value * PI / 180, self.Dcf02.value,
+
                                     self.hiVVc.value, self.hiVVab.value,
                                     self.shiftXY.value, self.shiftYZ.value, self.shiftXZ.value,
                                     self.H_Rot.value
@@ -88,8 +106,8 @@ ro = 5.2
 # Magnetization, frequencies and magnetic contributions for a distorted crystal: six sites
 
 ############## PARAMS
-numPoints = 26
-oneSidePointsNum = 15
+numPoints = 30
+oneSidePointsNum = 10
 
 # Hrot = 20000
 
@@ -113,7 +131,7 @@ oneSidePointsNum = 15
 pi23 = 2 * PI / 3
 # dTeta = 3 * 2 * sigmaTeta / (2 * oneSidePointsNum + 1)
 # dFi = 3 * 2 * sigmaFi / (2 * oneSidePointsNum + 1)
-dDcf2 = 7 / (2 * oneSidePointsNum + 1)  # normalX
+# dDcf2 = 7 / (2 * oneSidePointsNum + 1)  # normalX
 
 
 # MvHoLang = (138.90 * (1 - cc) + 164.93 * cc) * 3 + 69.72 * 5 + 28.08 + 16 * 14
@@ -163,12 +181,29 @@ def getVectM(pos, deltaTeta, deltaFi, tetaIon, fiIon, mIon):
 
 
 @guvectorize([
-    "void(float32[:], float32, float32, float32, float32, float32, float32, float32, float32, float32, float32, float32, float32, float32, float32, float32[:], float32[:], float32[:])"],
-    "(n),(),(),(),(),(),(),(),(),(),(),(),(),(),()->(n),(n),(n)",
+    "void(float32[:], "
+    "float32, "
+    "float32, float32, float32, float32, float32, float32, float32, "
+    "float32, float32, float32, float32, float32, float32, float32, "
+    "float32, float32, "
+    "float32, float32, float32, "
+    "float32, "
+    "float32[:], float32[:], float32[:])"],
+
+    "(n),"
+    "(),"
+    "(),(),(),(),(),(),(),"
+    "(),(),(),(),(),(),(),"
+    "(),(),"
+    "(),(),(),"
+    "()->(n),(n),(n)",
     target='parallel')
 # def calcM_H(H, Mx, My, Mz):
 def calcM_Angle(alpha,
-                cc, T, mIon, tetaIon, fiIon, sigmaTeta, sigmaFi, Dcf0, hiVVc, hiVVab,
+                T,
+                cc1, mIon1, tetaIon1, fiIon1, sigmaTeta1, sigmaFi1, Dcf01,
+                cc2, mIon2, tetaIon2, fiIon2, sigmaTeta2, sigmaFi2, Dcf02,
+                hiVVc, hiVVab,
                 shiftXY, shiftYZ, shiftXZ,
                 Hrot,
                 Mxy, Myz, Mxz):
@@ -176,10 +211,15 @@ def calcM_Angle(alpha,
     Myz[:] = [0 for i in range(len(alpha))]
     Mxz[:] = [0 for i in range(len(alpha))]
 
-    dTeta = 3 * 2 * sigmaTeta / (2 * oneSidePointsNum + 1)
-    dFi = 3 * 2 * sigmaFi / (2 * oneSidePointsNum + 1)
-    MvHoLang = (138.90 * (1 - cc) + 164.93 * cc) * 3 + 69.72 * 5 + 28.08 + 16 * 14
-    nPos = 1 / 6 * (3 * cc * NA / MvHoLang) * dTeta * dFi
+    MvHoLang = (138.90 * (1 - cc1 - cc2) + 164.93 * (cc1 + cc2)) * 3 + 69.72 * 5 + 28.08 + 16 * 14
+
+    dTeta1 = 3 * 2 * sigmaTeta1 / (2 * oneSidePointsNum + 1)
+    dFi1 = 3 * 2 * sigmaFi1 / (2 * oneSidePointsNum + 1)
+    nPos1 = 1 / 6 * (3 * cc1 * NA / MvHoLang) * dTeta1 * dFi1
+
+    dTeta2 = 3 * 2 * sigmaTeta2 / (2 * oneSidePointsNum + 1)
+    dFi2 = 3 * 2 * sigmaFi2 / (2 * oneSidePointsNum + 1)
+    nPos2 = 1 / 6 * (3 * cc2 * NA / MvHoLang) * dTeta2 * dFi2
 
     # maxPos = 2 * Dcf0
     # mu = maxPos - sigmaDcf2 ** 2 / maxPos
@@ -190,25 +230,47 @@ def calcM_Angle(alpha,
             for iTeta in prange(-oneSidePointsNum, oneSidePointsNum):
                 for pos in prange(6):
                     # if pos != 0 and pos != 1: continue
-                    vectMx, vectMy, vectMz = getVectM(pos, float32(iTeta * dTeta), float32(iFi * dFi),
-                                                      tetaIon, fiIon, mIon)
-                    dFactor = normal(iTeta * dTeta, sigmaTeta) * normal(iFi * dFi, sigmaFi)
+                    vectMx, vectMy, vectMz = getVectM(pos, float32(iTeta * dTeta1), float32(iFi * dFi1),
+                                                      tetaIon1, fiIon1, mIon1)
+                    dFactor = normal(iTeta * dTeta1, sigmaTeta1) * normal(iFi * dFi1, sigmaFi1)
                     angle = PI * i / 180
 
                     teta = angle + shiftXY * PI / 180
-                    EPos = getEPos(Hrot * math.sin(teta), Hrot * math.cos(teta), 0, vectMx, vectMy, vectMz, Dcf0)
+                    EPos = getEPos(Hrot * math.sin(teta), Hrot * math.cos(teta), 0, vectMx, vectMy, vectMz, Dcf01)
                     vectMH = vectMx * Hrot * math.sin(teta) + vectMy * Hrot * math.cos(teta)
-                    Mxy[i] += nPos * (vectMH ** 2 / Hrot) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
+                    Mxy[i] += nPos1 * (vectMH ** 2 / Hrot) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
 
                     teta = angle + shiftYZ * PI / 180
-                    EPos = getEPos(0, Hrot * math.sin(teta), Hrot * math.cos(teta), vectMx, vectMy, vectMz, Dcf0)
+                    EPos = getEPos(0, Hrot * math.sin(teta), Hrot * math.cos(teta), vectMx, vectMy, vectMz, Dcf01)
                     vectMH = vectMy * Hrot * math.sin(teta) + vectMz * Hrot * math.cos(teta)
-                    Myz[i] += nPos * (vectMH ** 2 / Hrot) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
+                    Myz[i] += nPos1 * (vectMH ** 2 / Hrot) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
 
                     teta = angle + shiftXZ * PI / 180
-                    EPos = getEPos(Hrot * math.sin(teta), 0, Hrot * math.cos(teta), vectMx, vectMy, vectMz, Dcf0)
+                    EPos = getEPos(Hrot * math.sin(teta), 0, Hrot * math.cos(teta), vectMx, vectMy, vectMz, Dcf01)
                     vectMH = vectMx * Hrot * math.sin(teta) + vectMz * Hrot * math.cos(teta)
-                    Mxz[i] += nPos * (vectMH ** 2 / Hrot) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
+                    Mxz[i] += nPos1 * (vectMH ** 2 / Hrot) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
+
+                for pos in prange(6):
+                    # if pos != 0 and pos != 1: continue
+                    vectMx, vectMy, vectMz = getVectM(pos, float32(iTeta * dTeta2), float32(iFi * dFi2),
+                                                      tetaIon2, fiIon2, mIon2)
+                    dFactor = normal(iTeta * dTeta2, sigmaTeta2) * normal(iFi * dFi2, sigmaFi2)
+                    angle = PI * i / 180
+
+                    teta = angle + shiftXY * PI / 180
+                    EPos = getEPos(Hrot * math.sin(teta), Hrot * math.cos(teta), 0, vectMx, vectMy, vectMz, Dcf02)
+                    vectMH = vectMx * Hrot * math.sin(teta) + vectMy * Hrot * math.cos(teta)
+                    Mxy[i] += nPos2 * (vectMH ** 2 / Hrot) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
+
+                    teta = angle + shiftYZ * PI / 180
+                    EPos = getEPos(0, Hrot * math.sin(teta), Hrot * math.cos(teta), vectMx, vectMy, vectMz, Dcf02)
+                    vectMH = vectMy * Hrot * math.sin(teta) + vectMz * Hrot * math.cos(teta)
+                    Myz[i] += nPos2 * (vectMH ** 2 / Hrot) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
+
+                    teta = angle + shiftXZ * PI / 180
+                    EPos = getEPos(Hrot * math.sin(teta), 0, Hrot * math.cos(teta), vectMx, vectMy, vectMz, Dcf02)
+                    vectMH = vectMx * Hrot * math.sin(teta) + vectMz * Hrot * math.cos(teta)
+                    Mxz[i] += nPos2 * (vectMH ** 2 / Hrot) * math.tanh(EPos * kcm / kB / T) / (EPos * kcm) * dFactor
 
         Mxy[i] += hiVVab * Hrot * math.cos(teta) ** 2 + hiVVab * Hrot * math.sin(teta) ** 2
         Myz[i] += hiVVc * Hrot * math.cos(teta) ** 2 + hiVVab * Hrot * math.sin(teta) ** 2
