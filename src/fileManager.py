@@ -142,9 +142,14 @@ def readFdpFile(f):
     except FileNotFoundError:
         return []
     headerString = str(file.readline())
-    if not ("Field" in headerString and "Signal" in headerString):
+    if not ("Field" in headerString):
         return []
+    isSingle = "Signal" in headerString
     hasMirror = "Mirror[MM]" in headerString
+
+    if not isSingle:
+        print()
+
     sampleName = Path(f).parts[-2]
     spectrumName = Path(f).stem
     file_time = dt.datetime.fromtimestamp(os.path.getmtime(f))

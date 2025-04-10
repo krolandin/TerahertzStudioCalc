@@ -244,6 +244,16 @@ class SpectraTable(QWidget):
             self.currentSelectedSpectrum = None
             self.correctionWidget.setVisible(False)
 
+    def saveCorrectionForAutoShift(self):
+        spectrum = self.currentSelectedSpectrum
+        if spectrum:
+            tup = self.updateCorrection(spectrum.xValues, spectrum.yValues, self.numberEdit.value)
+            spectrum.xValues = tup[0]
+            spectrum.yValues = tup[1]
+            self.currentSelectedSpectrum = None
+            self.correctionWidget.setVisible(False)
+            print("saveCorrectionForAutoShift")
+
     def eventFilter(self, source, event):
         if (event.type() == QtCore.QEvent.MouseButtonPress and
                 event.buttons() == QtCore.Qt.RightButton and

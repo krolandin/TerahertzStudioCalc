@@ -3,6 +3,7 @@ from datetime import datetime
 from dataTypes import DataTypes, FileTypes
 from spectrumObject import SpectrumObject
 
+
 class DataSet:
     def __init__(self, sample, thickness, temperature, comment, date, points, data_type, dataX, dataY):
         self.sample = sample
@@ -20,6 +21,7 @@ class DataSet:
                 f"comment={self.comment}, date={self.date}, points={self.points}, "
                 f"data_type={self.data_type}, dataX={self.dataX}, dataY={self.dataY})")
 
+
 def parse_asc_data(text):
     # Регулярные выражения для извлечения данных
     sample_pattern = re.compile(r"Sample=(.*)")
@@ -29,7 +31,7 @@ def parse_asc_data(text):
     date_pattern = re.compile(r"(\d{2}\.\d{2}\.\d{4})")
     points_pattern = re.compile(r"Points=(.*)")
     data_header_pattern = re.compile(r"Frequency,GHz\t(Transmission|Phase)")
-    data_row_pattern = re.compile(r"([\d,.]+E[+-]\d+)\t([\d,.]+E[+-]\d+)")  # Поддержка чисел с точкой и запятой
+    data_row_pattern = re.compile(r"([-]?[\d,.]+E[+-]\d+)\t([-]?[\d,.]+E[+-]\d+)")  # Поддержка чисел с точкой и запятой
 
     datasets = []
     lines = text.strip().split('\n')
@@ -48,7 +50,8 @@ def parse_asc_data(text):
         data_header_match = data_header_pattern.match(lines[i + 6])
 
         # Если заголовок данных отсутствует, пропускаем этот блок
-        if not all([sample_match, thickness_match, temperature_match, comment_match, date_match, points_match, data_header_match]):
+        if not all([sample_match, thickness_match, temperature_match, comment_match, date_match, points_match,
+                    data_header_match]):
             i += 1
             continue
 
@@ -57,7 +60,7 @@ def parse_asc_data(text):
         thickness = float(thickness_match.group(1).replace(',', '.'))
         temperature = float(temperature_match.group(1))
         comment = comment_match.group(1)
-        date = date_match.group(1)#datetime.strptime(date_match.group(1), "%d.%m.%Y")
+        date = date_match.group(1)  # datetime.strptime(date_match.group(1), "%d.%m.%Y")
         points = int(points_match.group(1))
         _data_type = data_header_match.group(1)
 
@@ -75,7 +78,7 @@ def parse_asc_data(text):
             if not data_row_match:
                 break
             # Преобразуем числа с запятой в точку и в float
-            frequency = float(data_row_match.group(1).replace(',', '.'))/30
+            frequency = float(data_row_match.group(1).replace(',', '.')) / 30
             value = float(data_row_match.group(2).replace(',', '.'))
             dataX.append(frequency)
             dataY.append(value)
@@ -88,10 +91,11 @@ def parse_asc_data(text):
     spectra = []
     fileType = FileTypes.asc
     for dataset in datasets:
-        print(dataset)
+        # print(dataset)
         spectrum = SpectrumObject(dataset.sample, dataset.comment, dataset.temperature,
                                   dataset.thickness, dataset.date, "Clipboard",
-                                  dataset.data_type, dataset.points, dataset.dataX[0], dataset.dataX[len(dataset.dataX) - 1],
+                                  dataset.data_type, dataset.points, dataset.dataX[0],
+                                  dataset.dataX[len(dataset.dataX) - 1],
                                   fileType)
         spectrum.xValues = dataset.dataX
         spectrum.yValues = dataset.dataY
